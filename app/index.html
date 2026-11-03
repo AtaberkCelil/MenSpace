@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ay Görevi — Görev Tasarım Simülatörü</title>
+  <meta name="description" content="NASA Space Apps mücadelesi için görev tasarım simülatörü: aracı tasarla, fırlat, Ay'a in, yüzey bilimi yap.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="kapsa">
+    <header class="ust">
+      <div class="ust-baslik">
+        <img src="assets/ay.png" alt="" width="34" height="33">
+        <h1>Ay Görevi</h1>
+        <span class="ust-alt">görev tasarım simülatörü</span>
+      </div>
+      <div class="ust-saat" id="gorev-saat" aria-label="görev saati">—</div>
+    </header>
+
+    <div class="kaynaklar" id="kaynaklar">
+      <span><b>Bütçe</b> <em class="tabular" id="kn-butce">40,0 M$</em></span>
+      <span><b>Kütle</b> <em class="tabular" id="kn-kutle">0 / 0 kg</em></span>
+      <span><b>Güç</b> <em class="tabular" id="kn-guc">0 /söl</em></span>
+      <span><b>Yakıt</b> <em class="tabular" id="kn-yakit">0</em></span>
+      <span><b>Bilim</b> <em class="tabular" id="kn-bilim">0</em></span>
+    </div>
+
+    <main>
+      <!-- BAŞLANGIÇ -->
+      <section class="ekran acik" id="ekran-baslangic" aria-label="görev tanıtımı">
+        <div class="kart giris">
+          <h2 class="giris-baslik">Kütle, güç ve bütçe aynı anda boğazını sıkıyor.</h2>
+          <p>NASA Space Apps mücadelesinin görevi bu: <strong>uçtan uca bir uzay görevi tasarla.</strong>
+          Öğrenciler genelde bütün bir görevi baştan sona deneme şansı bulamıyor; buradaki
+          her karar — fırlatma aracı, bilim yükü, güç sistemi — görevinin sonunu değiştiriyor.</p>
+          <ol class="giris-akis">
+            <li><span>1</span> Aracını ve bilim yükünü mühendislik kısıtları içinde tasarla.</li>
+            <li><span>2</span> Fırlatma penceresini doğru anda yakala — araç güvenilirliği sana izin verir.</li>
+            <li><span>3</span> Ay'a inişi elle yap; yakıt bitmeden, pervane kırılmadan.</li>
+            <li><span>4</span> Yüzeyde enstrümanları gezdire, pil bitmeden veriyi Dünya'ya ilet.</li>
+          </ol>
+          <p class="giris-not tabular" id="rekor-satir" hidden>En iyi görev puanı: <b id="rekor-deger">—</b></p>
+          <button class="btn ana" id="btn-giris" type="button">Kontrol kabinine gir →</button>
+        </div>
+      </section>
+
+      <!-- TASARIM -->
+      <section class="ekran" id="ekran-tasarim" aria-label="görev tasarımı">
+        <div class="bina-izgara">
+          <div class="hucre">
+            <h2 class="bolum-baslik">Fırlatma aracı</h2>
+            <div class="arac-liste" id="arac-liste" role="radiogroup" aria-label="fırlatma aracı seçimi"></div>
+            <h2 class="bolum-baslik">İniş modülü</h2>
+            <div class="arac-liste kucuk" id="modul-liste" role="radiogroup" aria-label="iniş modülü seçimi"></div>
+          </div>
+          <div class="hucre montaj-hucresi">
+            <h2 class="bolum-baslik">Montaj hattı <span class="bolum-not">seçtiğin neyse odur</span></h2>
+            <canvas id="montaj-kanvas" width="560" height="520" aria-label="araç montaj önizlemesi"></canvas>
+          </div>
+          <div class="hucre">
+            <h2 class="bolum-baslik">Bilim yükü</h2>
+            <div class="donanim-liste" id="donanim-liste"></div>
+          </div>
+        </div>
+        <div class="tasarim-alt">
+          <p class="durum tabular" id="tasarim-durum" aria-live="polite">Bir fırlatma aracı seç.</p>
+          <button class="btn ana" id="btn-tasarim-onay" type="button" disabled>Fırlatmaya geç →</button>
+        </div>
+      </section>
+
+      <!-- FIRLATMA -->
+      <section class="ekran" id="ekran-firlatma" aria-label="fırlatma">
+        <div class="kanvas-cerceve">
+          <canvas id="firlatma-kanvas" width="880" height="480" tabindex="0" aria-label="fırlatma zamanlama göstergesi"></canvas>
+        </div>
+        <div class="mini-mudahale">
+          <p id="firlatma-yazi" aria-live="polite">Renkli pencere araç güvenilirliği kadar geniş. Boşluk tuşu (ya da dokun) ile fırlat.</p>
+          <button class="btn ana" id="btn-firlat" type="button">FIRLAT</button>
+        </div>
+      </section>
+
+      <!-- SEYİR -->
+      <section class="ekran" id="ekran-seyir" aria-label="yörünge seyri">
+        <div class="kanvas-cerceve">
+          <canvas id="seyir-kanvas" width="880" height="480" aria-label="Dünya–Ay seyri"></canvas>
+        </div>
+        <div class="kart karar" id="seyir-karar" hidden>
+          <h3>Seyir düzeltme yakılandırması</h3>
+          <p id="seyir-karar-metin">Ay'ın çekimine doğru yörünge çıkmak için arabulucu yakıt atışı gerekiyor.</p>
+          <div class="karar-dugmeleri">
+            <button class="btn ana" id="btn-seyir-yakit" type="button">−3 yakıt · iniş hassasiyeti ↑, seyir güvence</button>
+            <button class="btn" id="btn-seyir-risk" type="button">Yakıt biriktir · inişe yeterli, seyir riskli</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- İNİŞ -->
+      <section class="ekran" id="ekran-inis" aria-label="Ay inişi">
+        <div class="kanvas-cerceve">
+          <canvas id="inis-kanvas" width="880" height="560" tabindex="0" aria-label="ay inişi oyunu"></canvas>
+        </div>
+        <div class="inis-hud">
+          <span class="tabular">düş hızı <b id="inis-vy">0</b> m/s</span>
+          <span class="tabular">yan hız <b id="inis-vx">0</b> m/s</span>
+          <span class="tabular">yakıt <b id="inis-yakit">0</b></span>
+          <span class="hud-ipucu">Yukarı = itki · ← → = yan itki · dokun = itki</span>
+        </div>
+      </section>
+
+      <!-- YÜZEY -->
+      <section class="ekran" id="ekran-yuzey" aria-label="yüzey operasyonları">
+        <div class="kanvas-cerceve kisa">
+          <canvas id="yuzey-kanvas" width="880" height="360" aria-label="ay yüzeyi sahnesi"></canvas>
+        </div>
+        <div class="yuzey-izgara">
+          <div class="kart yuzey-genis">
+            <h3 id="yuzey-gunosu">Söl 1</h3>
+            <p class="tabular gun-ozet" id="yuzey-ozet">—</p>
+            <div class="guc-cubugu" aria-label="pil durumu">
+              <div id="yuzey-pil" class="guc-cubugu-ic"></div>
+            </div>
+            <p class="tabular" id="yuzey-pil-yazi">—</p>
+          </div>
+          <div class="kart">
+            <h3>Enstrümanlar</h3>
+            <div class="cihaz-gecisleri" id="cihaz-gecisleri"></div>
+          </div>
+          <div class="kart">
+            <h3>Operasyon</h3>
+            <div class="islem-dugmeleri">
+              <button class="btn" id="btn-sol-basyaz" type="button">Sölü başlat →</button>
+              <button class="btn" id="btn-yuzey-veri" type="button">Veriyi Dünya'ya gönder</button>
+            </div>
+            <p class="not">Veri tamponun doluyor; anten olmazsa görev sonu yarısı sayılır.</p>
+          </div>
+        </div>
+        <p class="surec tabular" id="yuzey-gunluk" aria-live="polite">Yüzeye sağ çıktın. Enstrümanları çalıştır, veriyi ilet.</p>
+      </section>
+
+      <!-- RAPOR -->
+      <section class="ekran" id="ekran-rapor" aria-label="görev raporu">
+        <div class="kart rapor">
+          <h2 id="rapor-baslik">Görev raporu</h2>
+          <div class="rapor-nota">
+            <span class="nota-buyuk" id="rapor-nota">—</span>
+            <span class="nota-yan" id="rapor-ozet">—</span>
+          </div>
+          <table class="rapor-tablo" id="rapor-tablo">
+            <tbody id="rapor-govde"></tbody>
+          </table>
+          <div class="rapor-alt">
+            <button class="btn ana" id="btn-yeni-gorev" type="button">Yeni görev →</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="alt-not tabular">
+      NASA Space Apps mücadelesi · önyüzün çizimleri ekip tarafından, oyun tek dosyada kuruludur
+    </footer>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
