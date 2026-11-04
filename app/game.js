@@ -69,14 +69,14 @@ const DONANIM = [
 
 /* ============ hedef gök cisimleri ============ */
 const HEDEFLER = [
-  { anahtar: "ay", ad: "Ay", img: "assets/ay.png", cekim: 42, zemin: "#8A8D99", atmosfer: "yok",
+  { anahtar: "ay", ad: "Ay", img: "assets/ay.png", cekim: 42, zemin: "#8A8D99", atmosfer: "yok", yuzey: "ay_yuzeyi",
     not: "1,62 m/s² — hafif çekim, yumuşak iniş." },
-  { anahtar: "mars", ad: "Mars", img: "assets/mars.png", cekim: 50, zemin: "#A0522D", atmosfer: "ince CO₂",
+  { anahtar: "mars", ad: "Mars", img: "assets/mars.png", cekim: 50, zemin: "#A0522D", atmosfer: "ince CO₂", yuzey: "mars_yuzey",
     not: "3,72 m/s² — daha ağır çekim, ama ince atmosfer biraz frenliyor." },
-  { anahtar: "merkur", ad: "Merkür", img: "assets/merkur.png", cekim: 52, zemin: "#8A8578", atmosfer: "yok",
+  { anahtar: "merkur", ad: "Merkür", img: "assets/merkur.png", cekim: 52, zemin: "#8A8578", atmosfer: "yok", yuzey: "merkur_yuzey",
     not: "3,70 m/s² — atmosfer yok, düşüşü sadece motor kesiyor." },
-  { anahtar: "venus", ad: "Venüs", img: "assets/venus.png", cekim: 60, zemin: "#C9A227", atmosfer: "yoğun CO₂",
-    not: "8,87 m/s² — ağır çekim, her itki yakıt yakıyor." },
+  { anahtar: "venus", ad: "Venüs", img: "assets/venus.png", cekim: 60, zemin: "#C9A227", atmosfer: "yoğun CO₂", yuzey: "venus_yuzey", bulut: "venus_bulut",
+    not: "8,87 m/s² — ağır çekim, her itki yakıt yakar." },
 ];
 
 /* ============ görev brifleri ============ */
@@ -167,6 +167,7 @@ function tumResimleriYukle() {
   liste.push("assets/patlama.png", "assets/dunya.png", "assets/ay.png",
              "assets/ay_yuzeyi.png", "assets/arkaplan.png");
   HEDEFLER.forEach((h) => { if (h.anahtar !== "ay") liste.push(h.img); });
+  liste.push("assets/venus_bulut.png", "assets/mars_rover.png", "assets/gunes.png", "assets/saturn.png", "assets/inis_basarili.png", "assets/inis_basarisiz.png", "assets/rozet_inis.png", "assets/rozet_sol.png", "assets/rozet_bagis.png", "assets/rozet_s.png");
   liste.forEach(kaynak => {
     const im = new Image();
     im.src = kaynak;
@@ -178,6 +179,7 @@ function tumResimleriYukle() {
 function ekranAc(isim) {
   document.querySelectorAll(".ekran").forEach(e => e.classList.remove("acik"));
   $("#ekran-" + isim).classList.add("acik");
+  document.body.classList.toggle("menu-mode", isim === "baslangic" || isim === "brif");
   G.faz = isim;
 }
 
@@ -252,7 +254,7 @@ function yuzeySeridi(ctx, y, w, tint) {
   ctx.fillStyle = "rgba(35,37,47,0.22)";
   ctx.fillRect(0, y, w, 84);
   if (tint) {
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.55;
     ctx.fillStyle = tint;
     ctx.fillRect(0, y, w, 84);
     ctx.globalAlpha = 1;
@@ -355,9 +357,7 @@ function brifSec(m) {
   G.yuzey.geceler = 0;
   G.yuzey.kesintisiz = 0;
   misyonKartlariCiz();
-  const giris = $("#btn-giris");
-  giris.disabled = false;
-  giris.textContent = "Kontrol kabinine gir →";
+  $("#btn-brif-tasarim").disabled = false;
   brifKartiGuncelle();
 }
 
@@ -869,7 +869,7 @@ function seyirCiz(dt) {
 }
 
 /* ============ İNİŞ ============ */
-const inisTuslari = { itki: false, sol: false, sag: false };
+const inisTuslari = { itki: false, yarim: false, sol: false, sag: false };
 
 function iniseGec() {
   ekranAc("inis");
@@ -889,26 +889,29 @@ function inisTusKur() {
   const c = $("#inis-kanvas");
   document.addEventListener("keydown", (e) => {
     if (G.faz !== "inis") return;
-    if (e.code === "Space" || e.key === "ArrowUp") { e.preventDefault(); if (!e.repeat) { sesAc(); inisTuslari.itki = true; } }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); inisTuslari.sol = true; }
-    else if (e.key === "ArrowRight") { e.preventDefault(); inisTuslari.sag = true; }
+    if (e.code === "Space" || e.code === "KeyW" || e.key === "ArrowUp") { e.preventDefault(); if (!e.repeat) { sesAc(); inisTuslari.itki = true; } }
+    else if (e.code === "KeyS" || e.key === "ArrowDown") { e.preventDefault(); if (!e.repeat) { sesAc(); inisTuslari.yarim = true; } }
+    else if (e.key === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); inisTuslari.sol = true; }
+    else if (e.key === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); inisTuslari.sag = true; }
   });
   document.addEventListener("keyup", (e) => {
-    if (e.code === "Space" || e.key === "ArrowUp") inisTuslari.itki = false;
-    else if (e.key === "ArrowLeft") inisTuslari.sol = false;
-    else if (e.key === "ArrowRight") inisTuslari.sag = false;
+    if (e.code === "Space" || e.code === "KeyW" || e.key === "ArrowUp") inisTuslari.itki = false;
+    else if (e.code === "KeyS" || e.key === "ArrowDown") inisTuslari.yarim = false;
+    else if (e.key === "ArrowLeft" || e.code === "KeyA") inisTuslari.sol = false;
+    else if (e.key === "ArrowRight" || e.code === "KeyD") inisTuslari.sag = false;
   });
   c.addEventListener("pointerdown", (e) => {
     e.preventDefault(); sesAc();
     const kutu = c.getBoundingClientRect();
     const oran = (e.clientX - kutu.left) / kutu.width;
     inisTuslari.itki = true;
+    inisTuslari.yarim = false;
     inisTuslari.sol = inisTuslari.sag = false;
     if (oran < 0.42) inisTuslari.sol = true;
     if (oran > 0.58) inisTuslari.sag = true;
   });
-  c.addEventListener("pointerup", () => { inisTuslari.itki = inisTuslari.sol = inisTuslari.sag = false; });
-  c.addEventListener("pointercancel", () => { inisTuslari.itki = inisTuslari.sol = inisTuslari.sag = false; });
+  c.addEventListener("pointerup", () => { inisTuslari.itki = inisTuslari.yarim = inisTuslari.sol = inisTuslari.sag = false; });
+  c.addEventListener("pointercancel", () => { inisTuslari.itki = inisTuslari.yarim = inisTuslari.sol = inisTuslari.sag = false; });
 }
 
 function inisCiz(dt) {
@@ -918,6 +921,14 @@ function inisCiz(dt) {
   const i = G.inis;
   const L = i.lander;
   yildizOrgu(ctx, w, h);
+  if (G.hedef.anahtar === "venus") {
+    const vIm = resim("venus_bulut");
+    if (vIm && vIm.complete) {
+      ctx.globalAlpha = 0.88;
+      ctx.drawImage(vIm, 0, 0, w, h * 0.45);
+      ctx.globalAlpha = 1;
+    }
+  }
   const zeminY = h - 64;
   yuzeySeridi(ctx, zeminY, w, G.hedef.zemin);
   ctx.fillStyle = "#177E89";
@@ -933,9 +944,12 @@ function inisCiz(dt) {
   if (i.durum === "inis") {
     const cer = Math.min(dt, 0.05);
     L.vy += G.hedef.cekim * cer;            // hedef gök cisminin çekimi
-    if (inisTuslari.itki && L.yakit > 0) {
-      L.vy -= L.itus * cer;
-      L.yakit = Math.max(0, L.yakit - 7 * cer);
+    let itkiGucu = 0;
+    if (inisTuslari.itki && L.yakit > 0) itkiGucu = 1;
+    else if (inisTuslari.yarim && L.yakit > 0) itkiGucu = 0.5;
+    if (itkiGucu > 0) {
+      L.vy -= L.itus * itkiGucu * cer;
+      L.yakit = Math.max(0, L.yakit - 7 * itkiGucu * cer);
     }
     if (inisTuslari.sol && L.yakit > 0) { L.vx -= L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer); }
     if (inisTuslari.sag && L.yakit > 0) { L.vx += L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer); }
@@ -966,7 +980,7 @@ function inisCiz(dt) {
 
   if (i.durum !== "kaza" && im.complete) {
     ctx.drawImage(im, L.x, L.y, g, boy);
-    if (i.durum === "inis" && inisTuslari.itki && L.yakit > 0) {
+    if (i.durum === "inis" && (inisTuslari.itki || inisTuslari.yarim) && L.yakit > 0) {
       ctx.fillStyle = "#F2C130";
       ctx.beginPath();
       ctx.moveTo(L.x + g / 2 - 7, L.y + boy - 18);
@@ -1101,6 +1115,22 @@ function yuzeyCiz() {
   const pIm = resim("panel");
   if (G.donanim.has("panel") && pIm && pIm.complete) {
     ctx.drawImage(pIm, bes - 170, zeminY - 70, 84, 63);
+  }
+  if (G.hedef.anahtar === "mars") {
+    const rIm = resim("mars_rover");
+    if (rIm && rIm.complete) {
+      const boy = 66, g = boy * (rIm.naturalWidth / rIm.naturalHeight);
+      ctx.drawImage(rIm, 18, zeminY - boy, g, boy);
+      etiket(ctx, "rover", 18 + g / 2, zeminY + 24);
+    }
+  }
+  if (G.hedef.anahtar === "venus") {
+    const vIm = resim("venus_bulut");
+    if (vIm && vIm.complete) {
+      ctx.globalAlpha = 0.75;
+      ctx.drawImage(vIm, 0, 0, w, h * 0.38);
+      ctx.globalAlpha = 1;
+    }
   }
   yuzeyOzetYaz();
 }
@@ -1332,6 +1362,29 @@ function raporaGec(baslik, ozet, kaynak) {
     : (tamaNotu || "Görev tamamlanamadı — mühendislik kurulu seni yeniden tasarıma davet ediyor.");
   $("#ekran-rapor .rapor").classList.toggle("basarisiz", !basarili);
 
+  const stamp = $("#rapor-stamp");
+  const stampIng = $("#rapor-stamp-img");
+  stamp.hidden = false;
+  stampIng.src = basarili ? "assets/inis_basarili.png" : "assets/inis_basarisiz.png";
+  stampIng.alt = basarili ? "görev başarılı" : "görev kayıp";
+
+  const rozBox = $("#rapor-rozetler");
+  rozBox.innerHTML = "";
+  const rozetler = [];
+  if (basarili) {
+    if (G.inis.hassasiyet && G.inis.hassasiyet > 0) rozetler.push(["rozet_inis.png", "başarılı iniş"]);
+    if (G.yuzey.sol > misyonSols()) rozetler.push(["rozet_sol.png", "tam plan"]);
+    if (G.yuzey.iletilen >= 100) rozetler.push(["rozet_bagis.png", "100+ veri"]);
+    if (nota === "S") rozetler.push(["rozet_s.png", "S sınıfı"]);
+  }
+  rozBox.hidden = rozetler.length === 0;
+  rozetler.forEach(([src, label]) => {
+    const d = document.createElement("div");
+    d.className = "rapor-rozet";
+    d.innerHTML = '<img src="assets/' + src + '" alt=""><span>' + label + '</span>';
+    rozBox.appendChild(d);
+  });
+
   const tb = $("#rapor-govde");
   tb.innerHTML = "";
   satirlar.forEach(([k, v, p]) => {
@@ -1348,6 +1401,8 @@ function raporaGec(baslik, ozet, kaynak) {
     const rekor = localStorage.getItem("menSpace.rekor");
     if (basarili && (!rekor || puan > parseFloat(rekor))) {
       localStorage.setItem("menSpace.rekor", String(puan));
+      const mr = $("#menu-rekor-deger");
+      if (mr) mr.textContent = say(puan, 0);
       $("#rekor-satir").hidden = false;
       $("#rekor-deger").textContent = say(puan, 0);
     }
@@ -1372,10 +1427,34 @@ function dondur(zaman) {
 /* ============ kurulum ============ */
 function bagla() {
   $("#btn-giris").addEventListener("click", () => {
+    sesAc(); ses("onay");
+    ekranAc("brif");
+  });
+  $("#btn-brif-menu").addEventListener("click", () => {
+    sesAc(); ses("tik");
+    ekranAc("baslangic");
+  });
+  $("#btn-brif-tasarim").addEventListener("click", () => {
     if (!G.brif) return;
     sesAc(); ses("onay");
     ekranAc("tasarim");
     brifKartiGuncelle();
+  });
+  const pop = (id, kutu) => {
+    const k = $(kutu);
+    if (!k) return;
+    $(id).addEventListener("click", () => { sesAc(); k.hidden = false; });
+    k.addEventListener("click", (e) => { if (e.target === k) k.hidden = true; });
+  };
+  pop("#btn-nasil", "#nasil");
+  $("#btn-nasil-kapat").addEventListener("click", () => { $("#nasil").hidden = true; });
+  pop("#btn-rekor", "#rekorlar-popup");
+  $("#btn-rekorlar-kapat").addEventListener("click", () => { $("#rekorlar-popup").hidden = true; });
+  $("#btn-kayit-sil").addEventListener("click", () => {
+    try { localStorage.removeItem("menSpace.rekor"); } catch (_) {}
+    $("#rekor-satir").hidden = true;
+    $("#menu-rekor-deger").textContent = "—";
+    sesAc(); ses("tik");
   });
   $("#btn-firlat").addEventListener("click", () => { sesAc(); firlatmaTikla(); });
   $("#firlatma-kanvas").addEventListener("keydown", (e) => {
@@ -1401,10 +1480,8 @@ function bagla() {
     G.brif = null;
     G.misyonlar = misyonlariUret();
     misyonKartlariCiz();
-    const giris = $("#btn-giris");
-    giris.disabled = true;
-    giris.textContent = "Önce bir görev seç";
-    ekranAc("baslangic");
+    $("#btn-brif-tasarim").disabled = true;
+    ekranAc("brif");
     saatGuncelle("görev brifingi");
     brifKartiGuncelle();
   });
@@ -1422,13 +1499,15 @@ function kur() {
   bagla();
   G.misyonlar = misyonlariUret();
   misyonKartlariCiz();
-  $("#btn-giris").disabled = true;
-  $("#btn-giris").textContent = "Önce bir görev seç";
+  $("#btn-brif-tasarim").disabled = true;
   try {
     const rekor = localStorage.getItem("menSpace.rekor");
     if (rekor) {
+      const v = say(parseFloat(rekor), 0);
       $("#rekor-satir").hidden = false;
-      $("#rekor-deger").textContent = say(parseFloat(rekor), 0);
+      $("#rekor-deger").textContent = v;
+      const mr = $("#menu-rekor-deger");
+      if (mr) mr.textContent = v;
     }
   } catch (_) {}
   saatGuncelle("görev brifingi");

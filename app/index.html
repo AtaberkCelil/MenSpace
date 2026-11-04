@@ -30,26 +30,83 @@
     </div>
 
     <main>
-      <!-- BAŞLANGIÇ -->
-      <section class="ekran acik" id="ekran-baslangic" aria-label="görev tanıtımı">
-        <div class="kart giris">
-          <h2 class="giris-baslik">Kütle, güç ve bütçe aynı anda boğazını sıkıyor.</h2>
-          <p>NASA Space Apps mücadelesinin görevi bu: <strong>uçtan uca bir uzay görevi tasarla.</strong>
-          Öğrenciler genelde bütün bir görevi baştan sona deneme şansı bulamıyor; buradaki
-          her karar — fırlatma aracı, bilim yükü, güç sistemi — görevinin sonunu değiştiriyor.</p>
-          <ol class="giris-akis">
-            <li><span>1</span> Görev brifingini seç — her koşuda hedef ve ortam değişiyor.</li>
-            <li><span>2</span> Aracını ve bilim yükünü mühendislik kısıtları içinde tasarla.</li>
-            <li><span>3</span> Fırlatma penceresini doğru anda yakala — araç güvenilirliği sana izin verir.</li>
-            <li><span>4</span> Ay'a inişi elle yap; yakıt bitmeden, pervane kırılmadan.</li>
-            <li><span>5</span> Yüzeyde enstrümanları gezdire, pil bitmeden veriyi Dünya'ya ilet.</li>
-          </ol>
-          <div class="gorev-secim">
-            <h3 class="gorev-secim-baslik">Görev brifingi <span>her koşuda üç yeni görev</span></h3>
-            <div class="gorev-liste" id="gorev-liste" role="radiogroup" aria-label="görev seçimi"></div>
+      <!-- ANA MENÜ -->
+      <section class="ekran acik menu-ekran" id="ekran-baslangic" aria-label="MenSpace ana menü">
+        <div class="menu-sahne" aria-hidden="true">
+          <img class="menu-gunes" src="assets/gunes.png" alt="">
+          <img class="menu-venus" src="assets/venus.png" alt="">
+          <img class="menu-mars" src="assets/mars.png" alt="">
+          <img class="menu-merkur" src="assets/merkur.png" alt="">
+          <img class="menu-saturn" src="assets/saturn.png" alt="">
+          <img class="menu-jupiter" src="assets/jupiter.png" alt="">
+          <img class="menu-dunya" src="assets/dunya.png" alt="">
+          <img class="menu-ay" src="assets/ay.png" alt="">
+          <img class="menu-roket" src="assets/roket_orta.png" alt="">
+          <img class="menu-uzay_araci" src="assets/uzay_araci.png" alt="">
+        </div>
+        <div class="menu-kutu">
+          <div class="menu-ust">
+            <span class="menu-etiket">Mens–1</span>
+            <span class="menu-for">görev tasarım simülatörü</span>
           </div>
-          <p class="giris-not tabular" id="rekor-satir" hidden>En iyi görev puanı: <b id="rekor-deger">—</b></p>
-          <button class="btn ana" id="btn-giris" type="button" disabled>Önce bir görev seç</button>
+          <h1 class="menu-logo"><span>MEN</span><br><span>SPACE</span></h1>
+          <p class="menu-tag">Fırlatma penceresini yakala.<br>İnişi kurtar.<br>Veriyi eve ulaştır.</p>
+          <div class="menu-butonlar">
+            <button class="btn ana menu-buton" id="btn-giris" type="button">GÖREVE BAŞLA →</button>
+            <button class="btn menu-buton" id="btn-nasil" type="button">NASIL OYNANIR</button>
+            <button class="btn menu-buton" id="btn-rekor" type="button">REKORLAR</button>
+          </div>
+          <div class="menu-rekor tabular"><span>en iyi görev puanı</span><b id="menu-rekor-deger">—</b></div>
+          <button class="menu-link" id="btn-kayit-sil" type="button">kayıtları temizle</button>
+        </div>
+
+        <div class="menu-popup" id="nasil" role="dialog" aria-label="nasıl oynanır" hidden>
+          <div class="menu-popup-alim">
+            <h2>Nasıl oynanır</h2>
+            <ol>
+              <li><b>Brifing</b> seç — her koşuda hedef, hedef gök cismi ve ortam değişir.</li>
+              <li><b>Tasarım</b> — bütçe, kütle ve güç dengesini kur; anten olmadan veri uçmaz.</li>
+              <li><b>Fırlatma</b> — pencereyi yakala: ilk tık geri sayım, ikinci tık ateştir.</li>
+              <li><b>İniş</b> — W = tam itki, S = yarım itki, A/D = yan itki; yakıt biterse oyun biter.</li>
+              <li><b>Yüzey</b> — söl boyunca cihazları çalıştır, veriyi Dünya'ya ilet.</li>
+            </ol>
+            <p class="menu-ipucu">Puan: fırlatma hassasiyeti + iniş hassasiyeti + toplanan bilim + bütçe ekonomisi + brifing ödülü.</p>
+            <button class="btn ana" id="btn-nasil-kapat" type="button">Anladım →</button>
+          </div>
+        </div>
+
+        <div class="menu-popup" id="rekorlar-popup" role="dialog" aria-label="rozetler ve rekorlar" hidden>
+          <div class="menu-popup-alim">
+            <h2>Görev rozetleri</h2>
+            <div class="rekor-rozetler">
+              <div class="rekor-rozet"><img src="assets/rozet_inis.png" alt=""><span>İlk iniş</span></div>
+              <div class="rekor-rozet"><img src="assets/rozet_sol.png" alt=""><span>10 söl</span></div>
+              <div class="rekor-rozet"><img src="assets/rozet_bagis.png" alt=""><span>100+ veri</span></div>
+              <div class="rekor-rozet"><img src="assets/rozet_s.png" alt=""><span>S sınıfı</span></div>
+            </div>
+            <p>Rozetler raporda kazanılır: başarıyla binmek, eksiksiz söl planını tamamlamak, 100+ birim veri iletmek ve S sınıfı not.</p>
+            <button class="btn ana" id="btn-rekorlar-kapat" type="button">Kapat</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GÖREV BRİFİNGİ -->
+      <section class="ekran brif-ekran" id="ekran-brif" aria-label="görev brifingi">
+        <div class="brif-ic">
+          <div class="brif-ust">
+            <button class="btn btn-nokta" id="btn-brif-menu" type="button">← Menü</button>
+            <div class="brif-ust-metin">
+              <span class="brif-ust-cizelge">oyun menüsü</span>
+              <h2>Görev <em>Brifingi</em></h2>
+              <p>hedef • gök cismi • ortam</p>
+            </div>
+            <p class="giris-not tabular" id="rekor-satir" hidden>En iyi puan: <b id="rekor-deger">—</b></p>
+          </div>
+          <div class="gorev-liste" id="gorev-liste" role="radiogroup" aria-label="görev seçimi"></div>
+          <div class="brif-alt">
+            <p class="brif-aciklama">Her görev listeden seçilir; tasarıma geçtikten sonra brifingi değiştiremezsin.</p>
+            <button class="btn ana" id="btn-brif-tasarim" type="button" disabled>Tasarıma geç →</button>
+          </div>
         </div>
       </section>
 
@@ -126,7 +183,7 @@
           <span class="tabular">düş hızı <b id="inis-vy">0</b> m/s</span>
           <span class="tabular">yan hız <b id="inis-vx">0</b> m/s</span>
           <span class="tabular">yakıt <b id="inis-yakit">0</b></span>
-          <span class="hud-ipucu">Yukarı = itki · ← → = yan itki · dokun = itki</span>
+          <span class="hud-ipucu">W = tam itki · S = yarım · A/D = yan · dokun = itki</span>
         </div>
       </section>
 
@@ -164,6 +221,7 @@
       <!-- RAPOR -->
       <section class="ekran" id="ekran-rapor" aria-label="görev raporu">
         <div class="kart rapor">
+          <div class="rapor-stamp" id="rapor-stamp" hidden><img id="rapor-stamp-img" alt="görev sonucu"></div>
           <h2 id="rapor-baslik">Görev raporu</h2>
           <div class="rapor-nota">
             <span class="nota-buyuk" id="rapor-nota">—</span>
@@ -172,6 +230,7 @@
           <table class="rapor-tablo" id="rapor-tablo">
             <tbody id="rapor-govde"></tbody>
           </table>
+          <div class="rapor-rozetler" id="rapor-rozetler" hidden></div>
           <div class="rapor-alt">
             <button class="btn ana" id="btn-yeni-gorev" type="button">Yeni görev →</button>
           </div>

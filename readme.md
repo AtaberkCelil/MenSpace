@@ -41,8 +41,11 @@ dahil edilmedi).
 
 ## Oyunun akışı
 
+Oyun doğrudan bir **ana menüyle** açılır; oradan “Göreve Başla” ile brifing ekranına gidilir, seçtiğin görevle tasarım fazına geçilir.
+
 | Faz | Ne yaparsın | Neyi öğrenirsin |
 |---|---|---|
+| **Ana menü** | Oyunu menüden başlat, “Nasıl Oynanır”ı aç veya rekorlarına bak | Oyunun kontrol yolunu |
 | **Brifing** | Üç görevden birini seçersin | Hedefin, gök cisminin ve ortamın tasarımı nasıl değiştirdiği |
 | **Tasarım** | Fırlatma aracı, iniş modülü ve bilim yükünü seçersin | Bütçe, kütle, güç dengesi ve anten zorunluluğu |
 | **Fırlatma** | Pencere göstergesinde ateşleme zamanını yakalarsın | Araç güvenilirliği ve pencere genişliği arasındaki bağ |
@@ -135,8 +138,8 @@ tercih edilir. Kasında'nın fazla yakıtı seyir fazında arabulucu atışı be
 
 ## Kontroller
 
-- **Fırlatma:** `Boşluk` tuşu veya `FIRLAT` düğmesi (ilk tık geri sayımı başlatır, ikinci tık ateşler)
-- **İniş:** `↑` / `Boşluk` = itki, `←` / `→` = yan itki; ekrana dokunmak da itki verir
+- **Fırlatma:** `Boşluk` tuşu veya `FIRLAT` düğmesi (ilk tık geri sayımı başlatır, ikinci tık ateşler); `W` de aynı işlevi görür
+- **İniş:** `W`/`↑`/`Boşluk` = tam itki, `S`/`↓` = yarım itki, `A`/`←` ve `D`/`→` = yan itki; ekrana dokunmak tam itki verir
 - **Yüzey:** Enstrüman kutularını işaretle, `Sölü başlat` ile günü ilerlet, `Veriyi Dünya'ya gönder` ile tamponu boşalt
 
 ## Puanlama
