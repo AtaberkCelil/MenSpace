@@ -7,23 +7,23 @@
    =========================================== */
 
 :root {
-  --kagit: #EDE7D6;
-  --kagit-2: #F6F1E3;
-  --murekkep: #23252F;
-  --murekkep-2: #5B5749;
-  --cizgi: #C9C1AB;
-  --sari: #F2C130;
-  --sari-zemin: #FBF0CE;
-  --damga: #C0392B;
-  --teal: #177E89;
-  --cyan: #21B7D9;
-  --gokyuzu: #3B4257;
-  --gece-2: #474E63;
+  --kagit: #060914;
+  --kagit-2: #101424;
+  --murekkep: #f2f0e6;
+  --murekkep-2: #b6b39f;
+  --cizgi: rgba(242, 240, 230, 0.16);
+  --sari: #f2c130;
+  --sari-zemin: rgba(242, 193, 48, 0.12);
+  --damga: #ff6b5c;
+  --teal: #4ad0e3;
+  --cyan: #4ad0e3;
+  --gokyuzu: #060914;
+  --gece-2: #1a2135;
   --fd: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
   --ft: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --fm: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
-  color-scheme: light;
-  caret-color: var(--teal);
+  color-scheme: dark;
+  caret-color: var(--sari);
 }
 
 ::selection { background: var(--sari); color: var(--murekkep); }
@@ -1153,11 +1153,10 @@ input[type="checkbox"] {
     #060914;
   background-color: #060914;
   background-image:
-    url("assets/arkaplan.png"),
-    radial-gradient(ellipse 100vw 80vh at 80% -10%, rgba(242, 193, 48, 0.16), transparent 45%),
-    radial-gradient(ellipse 100vw 80vh at -15% 110%, rgba(23, 126, 137, 0.18), transparent 46%);
-  background-size: 256px 256px, 100% 100%, 100% 100%;
-  background-repeat: repeat, no-repeat, no-repeat;
+    radial-gradient(ellipse 100vw 80vh at 80% -10%, rgba(242, 193, 48, 0.12), transparent 45%),
+    radial-gradient(ellipse 100vw 80vh at -15% 110%, rgba(23, 126, 137, 0.16), transparent 46%);
+  background-size: 100% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
   color: #f2f0e6;
   overflow: auto;
   padding: 28px 3vw 44px;
@@ -1397,3 +1396,189 @@ input[type="checkbox"] {
 #btn-leaderboard:hover { border-color: var(--teal); background: var(--teal); color: #101424; }
 
 .leaderboard-list-title { font-family: var(--fm); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #8f8f76; margin: 0 0 4px; }
+/* ============ TAM EKRAN — karanlık uzay kabuğu ============ */
+
+::selection { background: var(--sari); color: var(--kagit); }
+::-webkit-scrollbar-track { background: var(--kagit); }
+::-webkit-scrollbar-thumb { background: #2a3145; border: 3px solid var(--kagit); }
+
+::-webkit-scrollbar-thumb:hover { background: #3a4256; }
+
+body {
+  color: var(--murekkep);
+  background-color: #060914;
+  background-image:
+    radial-gradient(ellipse 80vw 60vh at 80% -10%, rgba(242, 193, 48, 0.10), transparent 55%),
+    radial-gradient(ellipse 70vw 60vh at -10% 110%, rgba(23, 126, 137, 0.16), transparent 58%);
+  background-size: 100% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+}
+
+.kapsa { padding-bottom: 32px; }
+
+/* üst şerit — kokpit çerçevesi */
+.ust {
+  border-bottom: 2px solid rgba(242, 240, 230, 0.18);
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.ust-baslik h1 { color: var(--murekkep); }
+.ust-alt { color: var(--murekkep-2); }
+.ust-saat { color: var(--sari); }
+
+/* kaynak / HUD şeridi */
+.kaynaklar { padding-top: 12px; }
+.kaynaklar b { color: var(--murekkep-2); }
+.kaynaklar em { color: var(--murekkep); }
+.kaynaklar em.asr { color: #ff6b5c; }
+
+/* kartlar — panel dili */
+.kart {
+  background: var(--kagit-2);
+  border: 1px solid rgba(242, 240, 230, 0.14);
+}
+
+.bolum-baslik { color: var(--murekkep); }
+.bolum-baslik small, .bolum-not { color: var(--murekkep-2); }
+
+/* butonlar — açık seçilebilir koyu liste */
+.btn {
+  background: #151b31;
+  color: var(--murekkep);
+  border: 2px solid rgba(242, 240, 230, 0.22);
+  border-bottom-width: 5px;
+  border-radius: 8px;
+}
+
+.btn:hover { background: #1a2135; }
+.btn:active { transform: translateY(2px); border-bottom-width: 3px; }
+
+.btn.ana {
+  background: var(--sari);
+  border-color: var(--sari);
+  color: #101424;
+}
+
+.btn.ana:hover { background: #f8cf4e; }
+
+.btn:disabled {
+  background: var(--kagit-2);
+  border-color: rgba(242, 240, 230, 0.10);
+  color: var(--murekkep-2);
+  opacity: 0.55;
+}
+
+/* seçenek kartları — araç / modül */
+.secenek {
+  background: var(--kagit-2);
+  border: 2px solid rgba(242, 240, 230, 0.14);
+  border-radius: 10px;
+  color: var(--murekkep);
+}
+
+.secenek:hover { background: #151b31; }
+
+.secenek.secili {
+  background: #1f1b0c;
+  border-color: var(--sari);
+  box-shadow: none;
+}
+
+.secenek .sec-ozet { color: var(--murekkep-2); }
+.secenek .sec-ad { color: var(--murekkep); }
+
+/* donanım satırları */
+.donanim {
+  background: var(--kagit-2);
+  border: 2px solid rgba(242, 240, 230, 0.14);
+  border-radius: 10px;
+  color: var(--murekkep);
+}
+
+.donanim.uyar { border-style: dashed; }
+
+.donanim-uzgun { color: var(--murekkep-2); }
+
+.dolap {
+  background: #060914;
+  border-color: rgba(242, 240, 230, 0.35);
+}
+
+.dolap.isaretli { background: var(--sari); }
+
+.dolap.isaretli::after {
+  border-left-color: #101424;
+  border-bottom-color: #101424;
+}
+
+/* montaj hattı */
+#montaj-kanvas,
+.kanvas-cerceve canvas {
+  border: 1px solid rgba(242, 240, 230, 0.18);
+}
+
+/* durum satırı */
+.durum { color: var(--murekkep-2); }
+.durum.uyari { color: #ff8a7a; }
+.durum.tamam { color: #7ce0a3; }
+
+/* brifing kartı */
+.brif-kart {
+  margin-bottom: 14px;
+  background: var(--kagit-2);
+  border: 1px solid rgba(242, 240, 230, 0.12);
+  border-left: 4px solid var(--sari);
+}
+
+.brif-ust h3 { color: var(--murekkep); }
+.brif-hedef { color: var(--murekkep); }
+.brif-modlar { color: var(--murekkep-2); }
+
+.gorev-zorluk { color: #101424; }
+.gorev-zorluk.z1 { background: #123526; color: #7ce0a3; border-color: #1f6b46; }
+.gorev-zorluk.z2 { background: #2c2310; color: var(--sari); border-color: #8a6a10; }
+.gorev-zorluk.z3 { background: #331212; color: #ff8a7a; border-color: #8a2f2f; }
+
+.brif-gok-cisim { color: var(--murekkep-2); }
+
+.onerilen-chip {
+  background: var(--kagit-2);
+  border: 1px solid rgba(242, 240, 230, 0.22);
+  color: var(--murekkep-2);
+}
+
+.onerilen-chip.var { background: rgba(52, 211, 153, 0.12); border-color: #1f6b46; }
+.onerilen-chip.var b { color: #7ce0a3; }
+.onerilen-chip.yok { border-style: dashed; }
+.onerilen-chip.yok b { color: #ff8a7a; }
+
+.brif-ilerleme { color: var(--murekkep); }
+.brif-ilerleme.tamam { color: #7ce0a3; }
+
+/* iniş HUD */
+.inis-hud b { color: var(--sari); }
+.inis-hud .hud-ipucu { color: var(--murekkep-2); }
+
+/* yüzey */
+.yuzey-izgara h3, .gun-ozet { color: var(--murekkep); }
+.surec {
+  background: #060914;
+  border: 1px solid rgba(242, 240, 230, 0.14);
+  border-left: 3px solid var(--sari);
+  color: var(--murekkep);
+}
+
+.surec .az { color: var(--murekkep-2); }
+
+.guc-cubugu { border-color: rgba(242, 240, 230, 0.35); background: #060914; }
+
+/* rapor */
+.nota-buyuk { color: var(--sari); }
+.rapor.basarisiz .nota-buyuk { color: #ff6b5c; }
+
+.rapor-tablo td { border-bottom-color: rgba(242, 240, 230, 0.12); color: var(--murekkep); }
+.rapor-tablo tr.buyuk td { border-bottom-color: var(--sari); }
+
+/* footer */
+.alt-not { border-top-color: rgba(242, 240, 230, 0.12); color: var(--murekkep-2); }
