@@ -1,8 +1,8 @@
 // MenSpace Official Challenge secured API — Supabase auth + D1 rate limiting
 const OFFICIAL_CHALLENGE_SEED = 1337;
-const MAX_ACTION_COUNT = 400;
-const MAX_BODY_BYTES = 18000;
-const SCORE_FAZ_MAX = 720000;
+const MAX_ACTION_COUNT = 1500;
+const MAX_BODY_BYTES = 262144;
+const SCORE_FAZ_MAX = 1200000;
 const RATE_LIMIT_PER_HOUR = 8;
 const CHALLENGE_TTL_MS = 15 * 60 * 1000;
 

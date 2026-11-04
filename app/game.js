@@ -1815,6 +1815,7 @@ function updateChallengeReportUI() {
 }
 
 async function saveOfficialScore() {
+  setAuthMessage("");
   if (!currentSession) { setAuthMessage("Önce Google ile giriş yap."); return; }
   if (!currentDisplayName) { setAuthMessage("Önce benzersiz isim seç."); return; }
   if (!G.challenge || !G.challenge.challengeId) { setAuthMessage("Bu sonuç Official Challenge sonucu."); return; }
