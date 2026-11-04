@@ -54,6 +54,7 @@
           <div class="menu-butonlar">
             <button class="btn ana menu-buton" id="btn-giris" type="button">GÖREVE BAŞLA →</button>
             <button class="btn menu-buton" id="btn-official" type="button">OFFICIAL CHALLENGE</button>
+            <button class="btn menu-buton" id="btn-account" type="button">HESAP — giriş yap</button>
             <button class="btn menu-buton" id="btn-leaderboard" type="button">LİDERLİK</button>
             <button class="btn menu-buton" id="btn-nasil" type="button">NASIL OYNANIR</button>
             <button class="btn menu-buton" id="btn-rekor" type="button">REKORLAR</button>
@@ -246,30 +247,64 @@
 
     <div class="leaderboard-popup" id="leaderboard-popup" role="dialog" aria-modal="true" hidden>
       <div class="leaderboard-popup-alim">
-        <h2>LİDERLİK</h2>
-        <form id="leaderboard-form" novalidate>
-          <label class="alias-label" for="leaderboard-alias">Rumuz</label>
-          <input class="alias-input" id="leaderboard-alias" name="alias" maxlength="24" autocomplete="nickname" autocapitalize="none" autocorrect="off" required>
-          <div class="turnstile-wrap" id="turnstile-container"></div>
-          <div class="leaderboard-actions">
-            <button type="submit" class="btn ana" id="leaderboard-submit">Skorumu kaydet</button>
-            <button type="button" class="btn" id="leaderboard-cancel">İptal</button>
-          </div>
-          <p class="leaderboard-hata" id="leaderboard-hata" aria-live="polite"></p>
-        </form>
-        <div class="leaderboard-list" id="leaderboard-list" hidden>
-          <h3>En iyi 20</h3>
-          <ol id="leaderboard-items"></ol>
-          <div class="leaderboard-list-alt">
-            <button class="btn ana" id="leaderboard-close" type="button">Kapat</button>
-          </div>
+        <div class="lb-ust">
+          <h2>HESAP · LİDERLİK</h2>
+          <button class="lb-close" id="leaderboard-close" type="button" aria-label="kapat">×</button>
+        </div>
+
+        <div class="lb-grid">
+          <section class="lb-account">
+            <div id="auth-out" class="auth-panel">
+              <p>Resmi skorlar Google hesabına ve seçtiğin benzersiz isme kaydedilir.</p>
+              <button class="btn ana" id="btn-google-signin" type="button">Google ile giriş yap</button>
+            </div>
+
+            <div id="auth-in" class="auth-panel hidden">
+              <div class="auth-user">
+                <div class="auth-avatar" id="auth-avatar"></div>
+                <div class="auth-user-text">
+                  <b id="auth-name">—</b>
+                  <span id="auth-email">—</span>
+                </div>
+              </div>
+
+              <form id="display-name-form" class="display-name-form hidden">
+                <label class="alias-label" for="display-name-input">Benzersiz isim</label>
+                <input class="alias-input" id="display-name-input" name="display_name" maxlength="24" autocomplete="nickname" autocapitalize="none" autocorrect="off" required>
+                <button type="submit" class="btn ana">İsmi kaydet</button>
+              </form>
+
+              <p id="display-name-summary" class="auth-displayname hidden">Benzersiz isim: <b id="display-name-value"></b>
+                <button class="btn small" id="btn-displayname-edit" type="button">değiştir</button></p>
+
+              <p id="auth-error" class="auth-error" aria-live="polite"></p>
+              <button class="btn" id="btn-signout" type="button">Çıkış yap</button>
+            </div>
+
+            <section class="lb-save">
+              <h3>RESMİ SKOR</h3>
+              <p id="lb-save-msg">Official Challenge sonucunu kaydetmek için Google ile giriş yap ve isim seç.</p>
+              <div class="turnstile-wrap" id="turnstile-container"></div>
+              <button class="btn ana" id="btn-save-official" type="button" disabled>Resmi Skoru Kaydet →</button>
+            </section>
+          </section>
+
+          <section class="lb-board">
+            <h3>TOP 20</h3>
+            <ol id="leaderboard-items" class="leaderboard-list"></ol>
+          </section>
         </div>
       </div>
-    </div>
+    </div>    </div>
 
     <footer class="alt-not tabular">
       MenSpace · NASA Space Apps mücadelesi · Menecigi takımı
   </div>
+  <script>
+    window.SUPABASE_URL = "https://ywrvktfwrmxcqjzqypdh.supabase.co";
+    window.SUPABASE_ANON_KEY = "sb_publishable_YZUcp8sCv6qauDQ8qxwnyw_PIJVv5uO";
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <script type="module" src="game.js"></script>
 </body>

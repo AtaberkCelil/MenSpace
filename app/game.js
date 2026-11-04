@@ -1448,6 +1448,15 @@ function raporaGec(baslik, ozet, kaynak) {
 }
 
 const OFFICIAL_CHALLENGE_SEED = 1337;
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON = window.SUPABASE_ANON_KEY || "";
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFzihhflQW6bQ3-I";
+
+let pendingLeaderboardToken = "";
+let turnstileMounted = false;
+let supabaseClient = null;
+let currentSession = null;
+let currentDisplayName = "";
 
 function mulberry32(seed) {
   return function() {
@@ -1460,31 +1469,202 @@ function mulberry32(seed) {
 
 function criarRng(seed) { return mulberry32(seed); }
 
-function logChallengeAction(type, data) {
-  if (!G.challenge || !G.challenge.log) return;
-  G.challenge.log.push({ t: G.clock || 0, type, ...(data || {}) });
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  if (!SUPABASE_URL || !SUPABASE_ANON || !window.supabase || !window.supabase.createClient) return null;
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { detectSessionInUrl: true, flowType: "pkce" },
+    });
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      currentSession = session;
+      updateAccountUI();
+    });
+    updateAccountUI();
+    return supabaseClient;
+  } catch (err) {
+    console.error("Supabase istemcisi yüklenemedi", err);
+    return null;
+  }
 }
 
-function applyOfficialAction(a) {
-  if (!a || !a.type) return;
-  switch (a.type) {
+function setAuthMessage(msg) {
+  const el = $("#auth-error");
+  if (el) el.textContent = msg || "";
+}
+
+function updateAccountButton(session) {
+  const btn = $("#btn-account");
+  if (!btn) return;
+  if (!session) {
+    btn.textContent = "HESAP — giriş yap";
+    btn.classList.remove("giris-yapildi");
+    return;
+  }
+  const meta = session.user.user_metadata || {};
+  const visible = currentDisplayName || meta.full_name || meta.name || (session.user.email || "").split("@")[0];
+  btn.textContent = "HESAP — " + visible;
+  btn.classList.add("giris-yapildi");
+}
+
+function fetchProfileName() {
+  if (!currentSession) return Promise.resolve(null);
+  return fetch(
+    SUPABASE_URL + "/rest/v1/profiles?user_id=eq." + encodeURIComponent(currentSession.user.id) +
+      "&select=display_name&limit=1",
+    { headers: { apikey: SUPABASE_ANON, Authorization: "Bearer " + currentSession.access_token } }
+  ).then((r) => (r.ok ? r.json() : [])).then((rows) => (rows && rows[0] && rows[0].display_name) || null);
+}
+
+function isDisplayNameAllowed(name) {
+  return typeof name === "string" && /^[A-Za-zÇĞİÖŞÜçğıöşü0-9 .-]{3,24}$/.test(name.trim());
+}
+
+function renderProfileState(name) {
+  const form = $("#display-name-form");
+  const summary = $("#display-name-summary");
+  if (name) {
+    form && form.classList.add("hidden");
+    summary && summary.classList.remove("hidden");
+    const valueNode = $("#display-name-value");
+    if (valueNode) valueNode.textContent = name;
+  } else {
+    summary && summary.classList.add("hidden");
+    form && form.classList.remove("hidden");
+  }
+  updateOfficialButtons();
+}
+
+function updateAccountUI() {
+  const out = $("#auth-out");
+  const inside = $("#auth-in");
+  if (!out || !inside) return;
+  if (!currentSession) {
+    currentDisplayName = "";
+    out.classList.remove("hidden");
+    inside.classList.add("hidden");
+    setAuthMessage("");
+    updateAccountButton(null);
+    updateOfficialButtons();
+    return;
+  }
+  out.classList.add("hidden");
+  inside.classList.remove("hidden");
+  const user = currentSession.user;
+  const meta = user.user_metadata || {};
+  $("#auth-email").textContent = user.email || "";
+  $("#auth-name").textContent = meta.full_name || meta.name || (user.email ? user.email.split("@")[0] : "Misafir");
+  const av = $("#auth-avatar");
+  if (av) av.style.backgroundImage = meta.avatar_url ? 'url("' + String(meta.avatar_url).replace(/"/g, "%22") + '")' : "";
+  fetchProfileName().then((name) => {
+    currentDisplayName = name || "";
+    renderProfileState(name);
+    updateAccountButton(currentSession);
+  });
+  updateAccountButton(currentSession);
+}
+
+function signInWithGoogle() {
+  const client = getSupabaseClient();
+  if (!client) { setAuthMessage("Oturum servisleri yüklenemedi — sayfayı yenile."); return; }
+  client.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  }).then((res) => { if (res.error) setAuthMessage("Google ile giriş yapılamadı: " + res.error.message); });
+}
+
+function signOut() {
+  const client = getSupabaseClient();
+  if (!client) return;
+  client.auth.signOut().then(() => {
+    currentSession = null;
+    currentDisplayName = "";
+    updateAccountUI();
+    refreshLeaderboardFromApi();
+    setAuthMessage("Çıkış yapıldı.");
+  });
+}
+
+function setDisplayName(name) {
+  if (!currentSession) { setAuthMessage("Önce Google ile giriş yap."); return Promise.resolve(); }
+  const clean = String(name || "").trim();
+  if (!isDisplayNameAllowed(clean)) {
+    setAuthMessage("İsim 3-24 karakter, harf/rakam/boşluk, nokta ve tire içerebilir.");
+    return Promise.resolve();
+  }
+  const headers = {
+    apikey: SUPABASE_ANON,
+    Authorization: "Bearer " + currentSession.access_token,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  };
+  return fetch(SUPABASE_URL + "/rest/v1/profiles", {
+    method: "POST", headers, body: JSON.stringify({ user_id: currentSession.user.id, display_name: clean }),
+  }).then((res) => {
+    if (res.status === 201 || res.status === 200 || res.status === 204) {
+      currentDisplayName = clean;
+      renderProfileState(clean);
+      setAuthMessage("İsim kaydedildi.");
+      return;
+    }
+    return res.json().then((data) => {
+      if (data.code === "23505") setAuthMessage("Bu isim zaten alınmış — başka bir isim dene.");
+      else setAuthMessage("İsim kaydedilemedi.");
+    });
+  }).catch(() => setAuthMessage("İsim kaydedilemedi."));
+}
+
+function updateDisplayName(name) {
+  if (!currentSession) return Promise.resolve();
+  const clean = String(name || "").trim();
+  if (!isDisplayNameAllowed(clean)) { setAuthMessage("İsim formatı geçersiz."); return Promise.resolve(); }
+  const headers = {
+    apikey: SUPABASE_ANON,
+    Authorization: "Bearer " + currentSession.access_token,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  };
+  return fetch(SUPABASE_URL + "/rest/v1/profiles?user_id=eq." + encodeURIComponent(currentSession.user.id), {
+    method: "PATCH", headers, body: JSON.stringify({ display_name: clean }),
+  }).then((res) => {
+    if (res.status === 204 || res.status === 200) {
+      currentDisplayName = clean;
+      renderProfileState(clean);
+      setAuthMessage("İsim güncellendi.");
+    } else {
+      res.json().then((data) => {
+        setAuthMessage(data.code === "23505" ? "Bu isim zaten alınmış." : "İsim güncellenemedi.");
+      });
+    }
+  }).catch(() => setAuthMessage("İsim güncellenemedi."));
+}
+
+function logChallengeAction(type, data) {
+  const challenge = G.challenge;
+  if (!challenge || !Array.isArray(challenge.log)) return;
+  challenge.log.push({ t: G.clock || 0, type: type, ...(data || {}) });
+}
+
+function applyOfficialAction(action) {
+  if (!action || !action.type) return;
+  switch (action.type) {
     case "brifing": {
-      const m = (G.misyonlar || [])[a.index];
-      if (m) { G.brif = m; G.hedef = m.gokCisim || HEDEFLER[0]; }
+      const mission = (G.misyonlar || [])[action.index];
+      if (mission) { G.brif = mission; G.hedef = mission.gokCisim || HEDEFLER[0]; }
       return;
     }
     case "arac": {
-      const arac = ARACLAR.find(x => x.anahtar === a.anahtar);
+      const arac = ARACLAR.find((x) => x.anahtar === action.anahtar);
       if (arac) G.arac = arac;
       return;
     }
     case "modul": {
-      const modul = MODULLER.find(x => x.anahtar === a.anahtar);
-      if (modul) { G.modul = modul; G.yakit = modul.yakit; }
+      const mod = MODULLER.find((x) => x.anahtar === action.anahtar);
+      if (mod) { G.modul = mod; G.yakit = mod.yakit; }
       return;
     }
     case "donanim": {
-      G.donanim = new Set(a.keys || []);
+      G.donanim = new Set(action.keys || []);
       return;
     }
     case "tasarimOnay": {
@@ -1496,39 +1676,33 @@ function applyOfficialAction(a) {
       return;
     }
     case "seyir": {
-      seyirKarar(a.burn === true);
+      seyirKarar(action.burn === true);
       return;
     }
     case "inisKey": {
       if (typeof inisTuslari === "undefined") return;
-      if (a.key === "KeyW") inisTuslari.itki = !!a.down;
-      else if (a.key === "KeyS") inisTuslari.yarim = !!a.down;
-      else if (a.key === "KeyA") inisTuslari.sol = !!a.down;
-      else if (a.key === "KeyD") inisTuslari.sag = !!a.down;
+      if (action.key === "KeyW") inisTuslari.itki = !!action.down;
+      else if (action.key === "KeyS") inisTuslari.yarim = !!action.down;
+      else if (action.key === "KeyA") inisTuslari.sol = !!action.down;
+      else if (action.key === "KeyD") inisTuslari.sag = !!action.down;
       return;
     }
-    case "sol": {
-      solYurut();
-      return;
-    }
-    case "veri": {
-      veriIlet();
-      return;
-    }
-    default:
-      return;
+    case "sol": { solYurut(); return; }
+    case "veri": { veriIlet(); return; }
+    default: return;
   }
 }
 
 function runOfficialChallenge(seed, actions) {
   challengeRandom = criarRng(seed);
-  G = freshState();
+  setGlobalG(freshState());
   G.clock = 0;
   G.misyonlar = misyonlariUret();
-  G.challenge = { seed, official: true };
-  const acts = (actions || []).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+  G.challenge = { seed: seed, official: true };
+  const acts = Array.isArray(actions) ? actions.slice().sort((a, b) => ((a && a.t) || 0) - ((b && b.t) || 0)) : [];
   const dt = 1 / 60;
-  let t = 0, i = 0;
+  let t = 0;
+  let i = 0;
   while (i < acts.length && t < 720) {
     const target = typeof acts[i].t === "number" ? acts[i].t : t;
     while (t < target) { const step = Math.min(dt, target - t); advanceGame(step); t += step; }
@@ -1536,16 +1710,148 @@ function runOfficialChallenge(seed, actions) {
     i++;
   }
   while (G.faz !== "rapor" && t < 720) { advanceGame(dt); t += dt; }
-  if (G.faz !== "rapor") {
-    return { ok: false, puan: 0, basarili: false, seconds: Math.round(t * 1000) / 1000 };
-  }
   const kaynak = G.raporKaynak || "yuzey";
   const sc = computeScore(kaynak);
-  const puan = Math.round(sc.puan * 10) / 10;
-  return { ok: true, puan, basarili: sc.basarili, faz: G.faz, seconds: Math.round(t * 1000) / 1000 };
+  return { ok: G.faz === "rapor", puan: sc.puan, basarili: sc.basarili, faz: G.faz };
 }
 
-/* ============ ana döngü ============ */
+function fetchLeaderboardFromApi() {
+  return fetch("/api/leaderboard", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((data) => (data && data.rows) || []);
+}
+
+function renderLeaderboard(rows) {
+  const ol = $("#leaderboard-items");
+  if (!ol) return;
+  ol.innerHTML = "";
+  (rows || []).forEach((row) => {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "lb-name";
+    name.textContent = String(row.display_name || row.alias || "?");
+    const score = document.createElement("span");
+    score.className = "lb-score";
+    score.textContent = Number(row.score).toFixed(1) + " p";
+    li.appendChild(name);
+    li.appendChild(score);
+    ol.appendChild(li);
+  });
+  if (ol.children.length === 0) {
+    const li = document.createElement("li");
+    li.innerHTML = "<span class='lb-name'>Henüz kayıt yok — ilk resmi skoru sen yap.</span>";
+    ol.appendChild(li);
+  }
+}
+
+function refreshLeaderboardFromApi() {
+  return fetchLeaderboardFromApi().then(renderLeaderboard).catch(() => {
+    const ol = $("#leaderboard-items");
+    if (ol) ol.innerHTML = "<li><span class='lb-name'>Sıralama yüklenemedi.</span></li>";
+  });
+}
+
+function updateOfficialButtons() {
+  const btn = $("#btn-save-official");
+  if (btn) btn.disabled = !(currentSession && currentDisplayName && pendingLeaderboardToken && G.challenge && G.challenge.official);
+  const msg = $("#lb-save-msg");
+  if (msg) {
+    if (!currentSession) msg.textContent = "Resmi skor için Google ile giriş yap.";
+    else if (!currentDisplayName) msg.textContent = "Benzersiz isim seçildiğinde kaydedebilirsin.";
+    else if (!pendingLeaderboardToken) msg.textContent = "Captcha doğrulaması gerekiyor.";
+    else msg.textContent = "Resmi skoru kaydedebilirsin.";
+  }
+}
+
+function showLeaderboardPopup(show) {
+  const pop = $("#leaderboard-popup");
+  if (!pop) return;
+  pop.hidden = !show;
+  if (show) { mountTurnstile(); refreshLeaderboardFromApi(); updateOfficialButtons(); }
+}
+
+function mountTurnstile() {
+  const cont = $("#turnstile-container");
+  if (!cont) return;
+  if (!window.turnstile) { cont.textContent = "Captcha yükleniyor…"; setTimeout(mountTurnstile, 600); return; }
+  if (turnstileMounted) { updateOfficialButtons(); return; }
+  const node = document.createElement("div");
+  cont.textContent = "";
+  cont.appendChild(node);
+  window.turnstile.render(node, {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: "dark",
+    callback: (token) => { pendingLeaderboardToken = token; updateOfficialButtons(); },
+    "expired-callback": () => { pendingLeaderboardToken = ""; updateOfficialButtons(); },
+    "error-callback": () => { setAuthMessage("Captcha doğrulaması alınamadı."); },
+  });
+  turnstileMounted = true;
+}
+
+function startOfficialChallenge() {
+  fetch("/api/challenge", { cache: "no-store" }).then((r) => r.json()).then((data) => {
+    challengeRandom = criarRng(data.seed);
+    setGlobalG(freshState());
+    G.clock = 0;
+    G.challenge = { official: true, challengeId: data.challengeId, seed: data.seed, log: [] };
+    G.misyonlar = misyonlariUret();
+    misyonKartlariCiz();
+    $("#btn-brif-tasarim").disabled = true;
+    ekranAc("brif");
+    saatGuncelle("Official Challenge — önce bir brifing seç");
+  }).catch(() => { setAuthMessage("Challenge sunucudan yanıt alamadı."); });
+}
+
+function updateChallengeReportUI() {
+  const block = $("#rapor-challenge");
+  if (!block) return;
+  const active = Boolean(G.challenge && G.challenge.official);
+  block.hidden = !active;
+  const msg = $("#rapor-challenge-msg");
+  if (active && msg) {
+    const sc = computeScore(G.raporKaynak || "yuzey").puan;
+    msg.textContent = "Official Challenge — skorun " + Math.round(sc * 10) / 10 + " puan. Resmi sıralamaya gir.";
+  }
+}
+
+async function saveOfficialScore() {
+  if (!currentSession) { setAuthMessage("Önce Google ile giriş yap."); return; }
+  if (!currentDisplayName) { setAuthMessage("Önce benzersiz isim seç."); return; }
+  if (!G.challenge || !G.challenge.challengeId) { setAuthMessage("Bu sonuç Official Challenge sonucu."); return; }
+  if (!pendingLeaderboardToken) { setAuthMessage("Captcha doğrulaması gerekli."); return; }
+  const token = pendingLeaderboardToken;
+  try {
+    const res = await fetch("/api/submit", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "authorization": "Bearer " + currentSession.access_token,
+      },
+      body: JSON.stringify({
+        challengeId: G.challenge.challengeId,
+        actions: G.challenge.log || [],
+        durationMs: Math.round((G.clock || 0) * 1000),
+        turnstile: token,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setAuthMessage(data.error || "Kayıt reddedildi."); return; }
+    setAuthMessage("Skor kaydedildi.");
+    pendingLeaderboardToken = "";
+    if (window.turnstile) window.turnstile.reset();
+    refreshLeaderboardFromApi();
+  } catch (err) {
+    setAuthMessage("Sunucuya ulaşılamadı.");
+  }
+}
+
+if (typeof window !== "undefined" && !window.MENSPACE_REPLAY) {
+  kur();
+}
+
+export { runOfficialChallenge, OFFICIAL_CHALLENGE_SEED, freshState, computeScore };
+
+/* ============ glav/ana döngü ============ */
 let sonZaman = 0;
 function advanceGame(dt) {
   G.clock = (G.clock || 0) + dt;
@@ -1555,6 +1861,7 @@ function advanceGame(dt) {
   else if (G.faz === "tasarim") tasarimCiz();
   else if (G.faz === "yuzey") yuzeyCiz();
 }
+
 function dondur(zaman) {
   const dt = Math.min(0.05, (zaman - sonZaman) / 1000 || 0.016);
   sonZaman = zaman;
@@ -1568,51 +1875,76 @@ function bagla() {
     sesAc(); ses("onay");
     ekranAc("brif");
   });
+
   $("#btn-official").addEventListener("click", () => {
     sesAc(); ses("onay");
     startOfficialChallenge();
   });
+
+  $("#btn-account").addEventListener("click", () => {
+    sesAc(); ses("tik");
+    showLeaderboardPopup(true);
+    refreshLeaderboardFromApi();
+  });
+
   $("#btn-leaderboard").addEventListener("click", () => {
     sesAc(); ses("tik");
     showLeaderboardPopup(true);
-    refreshLeaderboardPopup();
+    refreshLeaderboardFromApi();
   });
-  $("#leaderboard-cancel").addEventListener("click", () => showLeaderboardPopup(false));
+
   $("#leaderboard-close").addEventListener("click", () => showLeaderboardPopup(false));
   $("#leaderboard-popup").addEventListener("click", (e) => {
     if (e.target.id === "leaderboard-popup") showLeaderboardPopup(false);
   });
-  $("#leaderboard-form").addEventListener("submit", (event) => saveOfficialScore(event));
+
   $("#btn-lider-kaydet").addEventListener("click", () => {
-    sesAc(); ses("onay");
+    sesAc();
     showLeaderboardPopup(true);
+    refreshLeaderboardFromApi();
   });
+
+  $("#btn-google-signin").addEventListener("click", () => { sesAc(); ses("onay"); signInWithGoogle(); });
+  $("#btn-signout").addEventListener("click", () => { sesAc(); signOut(); });
+  $("#display-name-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = $("#display-name-input");
+    setDisplayName(input ? input.value : "");
+  });
+  $("#btn-displayname-edit").addEventListener("click", () => renderProfileState(""));
+  $("#btn-save-official").addEventListener("click", () => { sesAc(); ses("onay"); saveOfficialScore(); });
+
   $("#btn-brif-menu").addEventListener("click", () => {
     sesAc(); ses("tik");
     ekranAc("baslangic");
   });
+
   $("#btn-brif-tasarim").addEventListener("click", () => {
     if (!G.brif) return;
     sesAc(); ses("onay");
     ekranAc("tasarim");
     brifKartiGuncelle();
   });
+
   const pop = (id, kutu) => {
     const k = $(kutu);
     if (!k) return;
     $(id).addEventListener("click", () => { sesAc(); k.hidden = false; });
     k.addEventListener("click", (e) => { if (e.target === k) k.hidden = true; });
   };
+
   pop("#btn-nasil", "#nasil");
   $("#btn-nasil-kapat").addEventListener("click", () => { $("#nasil").hidden = true; });
   pop("#btn-rekor", "#rekorlar-popup");
   $("#btn-rekorlar-kapat").addEventListener("click", () => { $("#rekorlar-popup").hidden = true; });
+
   $("#btn-kayit-sil").addEventListener("click", () => {
     try { localStorage.removeItem("menSpace.rekor"); } catch (_) {}
     $("#rekor-satir").hidden = true;
     $("#menu-rekor-deger").textContent = "—";
     sesAc(); ses("tik");
   });
+
   $("#btn-firlat").addEventListener("click", () => { sesAc(); firlatmaTikla(); });
   $("#firlatma-kanvas").addEventListener("keydown", (e) => {
     if (e.code === "Space") { e.preventDefault(); sesAc(); firlatmaTikla(); }
@@ -1621,10 +1953,12 @@ function bagla() {
     if (e.target.closest("button")) return;
     e.preventDefault(); sesAc(); firlatmaTikla();
   });
+
   $("#btn-seyir-yakit").addEventListener("click", () => { sesAc(); ses("onay"); seyirKarar(true); });
   $("#btn-seyir-risk").addEventListener("click", () => { sesAc(); ses("tik"); seyirKarar(false); });
   $("#btn-sol-basyaz").addEventListener("click", () => { sesAc(); solYurut(); });
   $("#btn-yuzey-veri").addEventListener("click", () => { sesAc(); veriIlet(); });
+
   $("#btn-yeni-gorev").addEventListener("click", () => {
     G.yakit = G.modul ? G.modul.yakit : 0;
     G.yuzey.bilim = 0;
@@ -1642,152 +1976,12 @@ function bagla() {
     saatGuncelle("görev brifingi");
     brifKartiGuncelle();
   });
+
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space" && G.faz === "firlatma" && e.target === document.body) {
       e.preventDefault(); sesAc(); firlatmaTikla();
     }
   });
-}
-
-const OFFICIAL_CHALLENGE_KEY = "0x4AAAAAAFzihhflQW6bQ3-I";
-let pendingLeaderboardToken = "";
-
-async function startOfficialChallenge() {
-  try {
-    const cevap = await fetch("/api/challenge", { cache: "no-store" });
-    if (!cevap.ok) throw new Error("challenge error " + cevap.status);
-    const data = await cevap.json();
-    challengeRandom = criarRng(data.seed);
-    setGlobalG(freshState());
-    G.clock = 0;
-    G.challenge = { official: true, challengeId: data.challengeId, seed: data.seed, log: [] };
-    G.misyonlar = misyonlariUret();
-    misyonKartlariCiz();
-    $("#btn-brif-tasarim").disabled = true;
-    ekranAc("brif");
-    saatGuncelle("Official Challenge — önce bir brifing seç");
-  } catch (hata) {
-    console.error("official challenge başlatılamadı", hata);
-    hourDefault("Challenge sunucudan yanıt alamadı — biraz sonra tekrar dene.", true);
-  }
-}
-
-function hourDefault(msg, show) {
-  const el = $("#leaderboard-hata");
-  if (el) el.textContent = msg || "";
-  const pop = $("#leaderboard-popup");
-  if (pop && show) pop.hidden = false;
-}
-
-async function refreshLeaderboardPopup() {
-  const list = $("#leaderboard-list");
-  const items = $("#leaderboard-items");
-  if (!list || !items) return;
-  list.hidden = false;
-  $("#leaderboard-form").hidden = true;
-  items.innerHTML = "";
-  try {
-    const cevap = await fetch("/api/leaderboard", { cache: "no-store" });
-    const data = await cevap.json();
-    (data.rows || []).forEach((row) => {
-      const li = document.createElement("li");
-      const name = document.createElement("span");
-      name.className = "lb-name";
-      name.textContent = row.alias;
-      const meta = document.createElement("span");
-      meta.className = "lb-score";
-      meta.textContent = Number(row.score).toFixed(1) + " puan";
-      li.appendChild(name);
-      li.appendChild(meta);
-      items.appendChild(li);
-    });
-    if (items.children.length === 0) {
-      const li = document.createElement("li");
-      li.innerHTML = "<span class='lb-name'>Henüz kayıt yok — ilk resmi skoru sen yap.</span>";
-      items.appendChild(li);
-    }
-  } catch (hata) {
-    const li = document.createElement("li");
-    li.innerHTML = "<span class='lb-name'>Sıralama yüklenemedi.</span>";
-    items.appendChild(li);
-  }
-}
-
-function resetLeaderboardForm() {
-  const form = $("#leaderboard-form");
-  const list = $("#leaderboard-list");
-  const alias = $("#leaderboard-alias");
-  const hata = $("#leaderboard-hata");
-  if (form) form.hidden = false;
-  if (list) list.hidden = true;
-  if (alias) alias.value = "";
-  if (hata) hata.textContent = "";
-  const cont = $("#turnstile-container");
-  if (cont) {
-    cont.innerHTML = "";
-    if (window.turnstile) {
-      pendingLeaderboardToken = "";
-      window.turnstile.render(cont, {
-        sitekey: OFFICIAL_CHALLENGE_KEY,
-        action: "official-score",
-        theme: "dark",
-        callback: (t) => { pendingLeaderboardToken = t; },
-        "expired-callback": () => { pendingLeaderboardToken = ""; },
-        "error-callback": () => { hourDefault("Captcha doğrulaması alınamadı.", false); },
-      });
-    }
-  }
-}
-
-async function saveOfficialScore(event) {
-  event.preventDefault();
-  const aliasEl = $("#leaderboard-alias");
-  const alias = String(aliasEl ? aliasEl.value : "").trim();
-  if (!alias) { hourDefault("Rumuz yazmalısın.", false); return; }
-  if (!/^[A-Za-zÇĞİÖŞÜçğıöşü0-9 ._-]{1,24}$/.test(alias)) { hourDefault("Rumuz yalnızca harf, rakam, nokta ve tire içermeli (en fazla 24 karakter).", false); return; }
-  const hata = $("#leaderboard-hata");
-  if (!G.challenge || !G.challenge.challengeId) { hourDefault("Bu sonuç challenge değil.", false); return; }
-  if (!pendingLeaderboardToken) { if (hata) hata.textContent = "Captcha doğrulamasını bekle."; return; }
-  const score = computeScore(G.raporKaynak || "yuzey").puan;
-  if (!Number.isFinite(score)) { if (hata) hata.textContent = "Skor hesaplanamadı."; return; }
-  const payload = {
-    challengeId: G.challenge.challengeId,
-    alias,
-    actions: G.challenge.log || [],
-    turnstile: pendingLeaderboardToken,
-    durationMs: Math.round((G.clock || 0) * 1000),
-  };
-  try {
-    const cevap = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "content-type": "application/json; charset=utf-8" },
-      body: JSON.stringify(payload),
-    });
-    const data = await cevap.json();
-    if (!cevap.ok) { if (hata) hata.textContent = data.error || "Kayıt reddedildi."; return; }
-    await refreshLeaderboardPopup();
-  } catch (err) {
-    if (hata) hata.textContent = "Sunucuya ulaşılamadı.";
-  }
-}
-
-function showLeaderboardPopup(show) {
-  const pop = $("#leaderboard-popup");
-  if (!pop) return;
-  pop.hidden = !show;
-  if (show) resetLeaderboardForm();
-}
-
-function updateChallengeReportUI() {
-  const block = $("#rapor-challenge");
-  if (!block) return;
-  const active = Boolean(G.challenge && G.challenge.official);
-  block.hidden = !active;
-  const msg = $("#rapor-challenge-msg");
-  if (active && msg) {
-    const sc = computeScore(G.raporKaynak || "yuzey").puan;
-    msg.textContent = "Official Challenge — skorun " + Math.round(sc * 10) / 10 + " puan. Resmi sıralamaya gir.";
-  }
 }
 
 function kur() {
@@ -1798,6 +1992,8 @@ function kur() {
   G.misyonlar = misyonlariUret();
   misyonKartlariCiz();
   $("#btn-brif-tasarim").disabled = true;
+  getSupabaseClient();
+  updateAccountUI();
   try {
     const rekor = localStorage.getItem("menSpace.rekor");
     if (rekor) {
@@ -1812,9 +2008,3 @@ function kur() {
   kaynakGuncelle();
   requestAnimationFrame(dondur);
 }
-
-if (typeof window !== "undefined" && !window.MENSPACE_REPLAY) {
-  kur();
-}
-
-export { runOfficialChallenge, OFFICIAL_CHALLENGE_SEED, freshState, computeScore };

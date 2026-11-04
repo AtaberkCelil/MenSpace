@@ -42,6 +42,39 @@ dahil edilmedi).
 
 ## Official Challenge ve liderlik
 
+## Supabase ve hesap sistemi
+
+MenSpace Official Challenge skorları **Supabase Authentication** ile doğrulanır:
+
+- Kullanıcılar **Google ile giriş yapar**; resmi skor sadece hesaba işlenir.
+- Kayıt sırasında **benzersiz isim** seçilir; alınmakta olan isim kullanılamaz.
+- İsim istendiği gibi değiştirilebilir.
+- Display name ve skorlar **service role key** ile, sunucuda yürütülen replay doğrulamasından sonra yazılır.
+- Normal serbest görevler yerel rekor dışında hiçbir yere gitmez.
+
+### Kurulum
+
+1. Supabase projesi oluştur.
+2. Google’ı provider olarak aç (`Authentication → Providers → Google`).
+3. Yetkili redirect URI olarak `https://<project-ref>.supabase.co/auth/v1/callback` değerini Google Cloud Console’a koy.
+4. Authentication URL Configuration → Site URL = `https://nasaspaceapp.menemensogantutmuyor.workers.dev`; Redirect URLs’a yine bu adresi ekle.
+5. SQL editöründe `worker/supabase.sql` çalıştır. Yoksa aşağıdaki yapı kullanılır:
+   - `profiles`: `user_id`, `display_name`, `created_at`
+   - `official_scores`: `id`, `user_id`, `display_name`, `score`, `seconds`, `created_at`
+   - RLS açık; anonim kullanıcılar sadece `SELECT` yapabilir, `INSERT` herkese kapalı.
+6. Anahtarlar `.dev.vars` içinde saklanır, repoda paylaşılmaz:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `TURNSTILE_SECRET_KEY`
+   - `CHALLENGE_SECRET`
+
+### Önemli
+
+- `service_role` ne tarayıcıya ne de repoya girer.
+- Liderlik ekranı `LİDERLİK` düğmesinden açılır; hesap aç/kapat `HESAP` düğmesindedir.
+- Üstteki rekorlar sadece hesabına özgü değildir; tüm kullanıcılar görebilir.
+
 MenSpace’ta iki oyun modu vardır:
 
 - **Serbest görev:** her koşuda rastgele brifing/gök cismi; sonuç yalnızca yerel rekorlara yazılır.
@@ -67,15 +100,14 @@ Official Challenge’da sadece görev raporu tamamlandıktan sonra “Resmi Skor
 ### Kurulum
 
 ```bash
-# statik önizleme (liderlik çalışmaz)
+# statik önizleme (kimlik doğrulama çalışmaz)
 python3 -m http.server 8899 --directory app
 
 # tam geliştirme ortamı (Workers + yerel D1 + API)
-npx wrangler dev --port 8787
-
-# ilk defa çalıştırmada
-npx wrangler d1 execute menapp-scores --local --file=worker/schema.sql
+npx wrangler dev --port 8789
 ```
+
+Official Challenge sonuçları **yalnızca Supabase hesabına** kaydedilir; Google OAuth gerekir.
 
 Cloudflare tarafında `worker/index.mjs` çalışır; statik dosyalar `./app` klasöründen `ASSETS` binding’i ile servis edilir. D1 veritabanı `menapp-scores` olarak tanımlıdır. `TURNSTILE_SECRET_KEY` ve `CHALLENGE_SECRET` gizli değerlerdir ve repoya eklenmez.
 
