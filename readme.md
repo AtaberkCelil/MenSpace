@@ -39,6 +39,46 @@ uygun verilmiştir (Venüs > Merkür ≈ Mars > Ay). `assets/jupiter.png` ise ga
 planlanan "uçuş görevi" modu için bekliyor (yüzeyi olmadığından iniş mekaniğine
 dahil edilmedi).
 
+
+## Official Challenge ve liderlik
+
+MenSpace’ta iki oyun modu vardır:
+
+- **Serbest görev:** her koşuda rastgele brifing/gök cismi; sonuç yalnızca yerel rekorlara yazılır.
+- **OFFICIAL CHALLENGE:** tek ve sabit `seed: 1337` ile oynanan resmi mod. Tüm oyunculara aynı görev verilir; sonuç yalnızca **Official Challenge liderlik tablosunda** gösterilir.
+
+### Nasıl güvence altına alınır?
+
+Official Challenge skoru **istemciye güvenmez**:
+
+1. Sunucu RAM üstüne bir `seed` ve tek kullanımlık challenge-id verir.
+2. Menü → Official Challenge → oynarsan tüm hamleler kaydedilir.
+3. Kaydet’te tarayıcı `actions` listesini sunucuya gönderir.
+4. Sunucu oyunu **aynı seed + hamle listesi** ile baştan simüle eder; skorunu sunucuda yeniden hesaplar.
+5. Turnstile ekstra bot koruması sağlar; IP hash ile saatlik 8 istek limiti vardır.
+6. `.dev.vars` ve Cloudflare secret’ları repoya eklenmez.
+
+Bu yüzden JS’i değiştirip “999999 puan” yazmak işe yaramaz; sunucu replay’i 999999’i değil gerçek skoru üretir.
+
+### Ne puana bile ekstra?
+
+Official Challenge’da sadece görev raporu tamamlandıktan sonra “Resmi Skoru Kaydet” düğmesi açılır. Skor, sunucuda oyunun yeniden oynatılmasıyla doğrulanır. Liderlik ekranı menüden `LİDERLİK` ile açılır.
+
+### Kurulum
+
+```bash
+# statik önizleme (liderlik çalışmaz)
+python3 -m http.server 8899 --directory app
+
+# tam geliştirme ortamı (Workers + yerel D1 + API)
+npx wrangler dev --port 8787
+
+# ilk defa çalıştırmada
+npx wrangler d1 execute menapp-scores --local --file=worker/schema.sql
+```
+
+Cloudflare tarafında `worker/index.mjs` çalışır; statik dosyalar `./app` klasöründen `ASSETS` binding’i ile servis edilir. D1 veritabanı `menapp-scores` olarak tanımlıdır. `TURNSTILE_SECRET_KEY` ve `CHALLENGE_SECRET` gizli değerlerdir ve repoya eklenmez.
+
 ## Oyunun akışı
 
 Oyun doğrudan bir **ana menüyle** açılır; oradan “Göreve Başla” ile brifing ekranına gidilir, seçtiğin görevle tasarım fazına geçilir.

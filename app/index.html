@@ -53,6 +53,8 @@
           <p class="menu-tag">Fırlatma penceresini yakala.<br>İnişi kurtar.<br>Veriyi eve ulaştır.</p>
           <div class="menu-butonlar">
             <button class="btn ana menu-buton" id="btn-giris" type="button">GÖREVE BAŞLA →</button>
+            <button class="btn menu-buton" id="btn-official" type="button">OFFICIAL CHALLENGE</button>
+            <button class="btn menu-buton" id="btn-leaderboard" type="button">LİDERLİK</button>
             <button class="btn menu-buton" id="btn-nasil" type="button">NASIL OYNANIR</button>
             <button class="btn menu-buton" id="btn-rekor" type="button">REKORLAR</button>
           </div>
@@ -231,6 +233,10 @@
             <tbody id="rapor-govde"></tbody>
           </table>
           <div class="rapor-rozetler" id="rapor-rozetler" hidden></div>
+          <div class="rapor-challenge" id="rapor-challenge" hidden>
+            <p id="rapor-challenge-msg">Bu sonuç Official Challenge’a girer.</p>
+            <button class="btn ana" id="btn-lider-kaydet" type="button">Resmi Skoru Kaydet →</button>
+          </div>
           <div class="rapor-alt">
             <button class="btn ana" id="btn-yeni-gorev" type="button">Yeni görev →</button>
           </div>
@@ -238,9 +244,33 @@
       </section>
     </main>
 
+    <div class="leaderboard-popup" id="leaderboard-popup" role="dialog" aria-modal="true" hidden>
+      <div class="leaderboard-popup-alim">
+        <h2>LİDERLİK</h2>
+        <form id="leaderboard-form" novalidate>
+          <label class="alias-label" for="leaderboard-alias">Rumuz</label>
+          <input class="alias-input" id="leaderboard-alias" name="alias" maxlength="24" autocomplete="nickname" autocapitalize="none" autocorrect="off" required>
+          <div class="turnstile-wrap" id="turnstile-container"></div>
+          <div class="leaderboard-actions">
+            <button type="submit" class="btn ana" id="leaderboard-submit">Skorumu kaydet</button>
+            <button type="button" class="btn" id="leaderboard-cancel">İptal</button>
+          </div>
+          <p class="leaderboard-hata" id="leaderboard-hata" aria-live="polite"></p>
+        </form>
+        <div class="leaderboard-list" id="leaderboard-list" hidden>
+          <h3>En iyi 20</h3>
+          <ol id="leaderboard-items"></ol>
+          <div class="leaderboard-list-alt">
+            <button class="btn ana" id="leaderboard-close" type="button">Kapat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer class="alt-not tabular">
       MenSpace · NASA Space Apps mücadelesi · Menecigi takımı
   </div>
-  <script src="game.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>

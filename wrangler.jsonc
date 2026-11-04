@@ -1,7 +1,16 @@
 {
   "name": "nasaspaceapp",
   "compatibility_date": "2026-11-03",
+  "main": "worker/index.mjs",
   "assets": {
-    "directory": "./app"
-  }
+    "directory": "./app",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "menapp-scores",
+      "database_id": "3827e6bb-2a5f-4e24-88f3-67611e19e534"
+    }
+  ]
 }

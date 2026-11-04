@@ -3,10 +3,12 @@
 "use strict";
 
 /* ============ yardımcılar ============ */
+let challengeRandom = Math.random;
+const rng = () => challengeRandom();
 const $ = (s) => document.querySelector(s);
 const sinir = (a, x, b) => Math.max(a, Math.min(x, b));
 const say = (n, h) => n.toLocaleString("tr-TR", { maximumFractionDigits: h === undefined ? 1 : h });
-const rast = (a, b) => a + Math.random() * (b - a);
+const rast = (a, b) => a + rng() * (b - a);
 
 /* ============ ses (WebAudio, dosyasız) ============ */
 let sesBaglami = null;
@@ -126,25 +128,37 @@ const ZORLUK_SOL = { 1: 8, 2: 10, 3: 12 };
 const ZORLUK_AD = { 1: "kolay", 2: "orta", 3: "zor" };
 
 /* ============ oyun durumu ============ */
-const G = {
-  faz: "baslangic",
-  misyonlar: [],
-  brif: null,
-  hedef: HEDEFLER[0],
-  arac: null,
-  modul: null,
-  yakit: 0,
-  donanim: new Set(),
-  firlatma: { durum: "hazir", t: 0, merkez: 0.5, hamle: null, dogruluk: 0 },
-  seyir: { durum: "bekleme", t: 0, guvence: false },
-  inis: { durum: "bekleme", lander: null, pad: 440, hassasiyet: 0, sayac: 0 },
-  yuzey: {
-    sol: 1, pil: 0, pilKap: 0, tampon: 0, bilim: 0,
-    aktif: new Set(), gunesKesik: false, bitti: false, pilBitti: false,
-    bayrakDikildi: false, antenArizasi: false,
-    iletilen: 0, geceler: 0, kesintisiz: 0,
-  },
-};
+function setGlobalG(newG) {
+  G = newG;
+  if (typeof window !== "undefined") window.MENSPACE = G;
+}
+
+function freshState() {
+  return {
+    faz: "baslangic",
+    clock: 0,
+    misyonlar: [],
+    brif: null,
+    hedef: HEDEFLER[0],
+    arac: null,
+    modul: null,
+    yakit: 0,
+    donanim: new Set(),
+    challenge: null,
+    firlatma: { durum: "hazir", t: 0, merkez: 0.5, hamle: null, dogruluk: 0 },
+    seyir: { durum: "bekleme", t: 0, guvence: false },
+    inis: { durum: "bekleme", lander: null, pad: 440, hassasiyet: 0, sayac: 0 },
+    yuzey: {
+      sol: 1, pil: 0, pilKap: 0, tampon: 0, bilim: 0,
+      aktif: new Set(), gunesKesik: false, bitti: false, pilBitti: false,
+      bayrakDikildi: false, antenArizasi: false,
+      iletilen: 0, geceler: 0, kesintisiz: 0,
+    },
+  };
+}
+let G = freshState();
+if (typeof window !== "undefined") window.MENSPACE = G;
+if (typeof window !== "undefined") window.MENSPACE = G;
 
 /* ============ varlık yükleme ============ */
 const resimler = {};
@@ -293,7 +307,7 @@ function misyonlariUret() {
   const secim = [];
   [1, 2, 3].forEach((z) => {
     const adaylar = havuz.filter((b) => b.zorluk === z);
-    const b = adaylar[Math.floor(Math.random() * adaylar.length)];
+    const b = adaylar[Math.floor(rng() * adaylar.length)];
     secim.push(b);
     havuz.splice(havuz.indexOf(b), 1);
   });
@@ -302,15 +316,15 @@ function misyonlariUret() {
     const modHavuz = [...MODIFIYELER];
     const mods = [];
     for (let i = 0; i < modSayisi[b.zorluk]; i++) {
-      const m = modHavuz.splice(Math.floor(Math.random() * modHavuz.length), 1)[0];
+      const m = modHavuz.splice(Math.floor(rng() * modHavuz.length), 1)[0];
       mods.push(m);
     }
     let hedef = b.hedef;
     if (mods.some((m) => m.tip === "sakin")) hedef = Math.round(hedef * 1.25);
-    const gokCisim = HEDEFLER[Math.floor(Math.random() * HEDEFLER.length)];
+    const gokCisim = HEDEFLER[Math.floor(rng() * HEDEFLER.length)];
     return {
       ...b, hedef, modifiyeler: mods, sols: ZORLUK_SOL[b.zorluk], gokCisim,
-      kod: "MS-" + (100 + Math.floor(Math.random() * 899)),
+      kod: "MS-" + (100 + Math.floor(rng() * 899)),
     };
   });
 }
@@ -351,6 +365,7 @@ function misyonKartlariCiz() {
 }
 
 function brifSec(m) {
+  if (G.challenge) G.challenge.log.push({ t: G.clock || 0, type: "brifing", index: G.misyonlar.indexOf(m) });
   G.brif = m;
   G.hedef = m.gokCisim || HEDEFLER[0];
   G.yuzey.iletilen = 0;
@@ -450,7 +465,7 @@ function tasarimKur() {
       '<span class="sec-metin"><span class="sec-ad">' + a.ad + "</span>" +
       '<span class="sec-ozet tabular">' + a.kapasite + " kg yük · " + say(a.maliyet, 0) +
       " M$ · güvenilirlik %" + Math.round(a.guven * 100) + "</span></span>";
-    b.addEventListener("click", () => { sesAc(); ses("tik"); G.arac = a; tasarimSecGuncelle(); tasarimDenetim(); });
+    b.addEventListener("click", () => { sesAc(); ses("tik"); G.arac = a; logChallengeAction("arac", { anahtar: a.anahtar }); tasarimSecGuncelle(); tasarimDenetim(); });
     aracKap.appendChild(b);
     a.htm = b;
   });
@@ -467,7 +482,7 @@ function tasarimKur() {
       '<span class="sec-metin"><span class="sec-ad">' + m.ad + "</span>" +
       '<span class="sec-ozet tabular">' + m.kutle + " kg · " + say(m.maliyet, 0) + " M$ · " + m.yakit +
       " yakıt · itki " + m.itus + "</span></span>";
-    b.addEventListener("click", () => { sesAc(); ses("tik"); G.modul = m; G.yakit = m.yakit; tasarimSecGuncelle(); tasarimDenetim(); });
+    b.addEventListener("click", () => { sesAc(); ses("tik"); G.modul = m; G.yakit = m.yakit; logChallengeAction("modul", { anahtar: m.anahtar }); tasarimSecGuncelle(); tasarimDenetim(); });
     modulKap.appendChild(b);
     m.htm = b;
   });
@@ -506,11 +521,13 @@ function tasarimKur() {
         if (d.anahtar === "anten_k") donanimKaldir("anten_b");
         if (d.anahtar === "anten_b") donanimKaldir("anten_k");
         G.donanim.add(d.anahtar);
+        logChallengeAction("donanim", { keys: [...G.donanim] });
         dolap.classList.add("isaretli");
         notP.style.display = "block";
         satir.classList.remove("uyar");
       } else {
         G.donanim.delete(d.anahtar);
+        logChallengeAction("donanim", { keys: [...G.donanim] });
         dolap.classList.remove("isaretli");
         notP.style.display = "none";
         satir.classList.add("uyar");
@@ -520,7 +537,7 @@ function tasarimKur() {
     donKap.appendChild(satir);
   });
 
-  $("#btn-tasarim-onay").addEventListener("click", () => { sesAc(); ses("onay"); firlatmayaGec(); });
+  $("#btn-tasarim-onay").addEventListener("click", () => { logChallengeAction("tasarimOnay", {}); sesAc(); ses("onay"); firlatmayaGec(); });
   tasarimDenetim();
 }
 
@@ -673,6 +690,7 @@ function firlatmayaGec() {
 
 function firlatmaTikla() {
   const f = G.firlatma;
+  logChallengeAction("launchClick", {});
   if (f.durum === "hazir") { f.durum = "canli"; f.t = 0; ses("tik"); return; }
   if (f.durum !== "canli") return;
   const hiz = 0.9 / G.arac.pencere;
@@ -684,7 +702,7 @@ function firlatmaTikla() {
   const sanc = fark <= yari
     ? G.arac.guven * (0.88 + 0.12 * f.dogruluk)
     : G.arac.guven * 0.22 * f.dogruluk;
-  const tuttu = Math.random() < sanc;
+  const tuttu = rng() < sanc;
   f.durum = tuttu ? "ucus" : "patlak";
   f.t = 0;
   if (tuttu) { ses("firlat"); saatGuncelle("yükseliş — burun aşağı, tutum iyi"); }
@@ -716,7 +734,7 @@ function firlatmaCiz(dt) {
       ctx.beginPath();
       ctx.moveTo(w / 2 - 9, zeminY + 30);
       ctx.lineTo(w / 2 + 9, zeminY + 30);
-      ctx.lineTo(w / 2, zeminY + 62 + Math.random() * 14);
+      ctx.lineTo(w / 2, zeminY + 62 + rng() * 14);
       ctx.fill();
     }
     etiket(ctx, f.durum === "hazir" ? "geri sayım bekleniyor" : "T−0 — pencereyi yakala", w / 2, zeminY + 14);
@@ -734,7 +752,7 @@ function firlatmaCiz(dt) {
         ctx.beginPath();
         ctx.moveTo(w / 2 - 9, y + boy);
         ctx.lineTo(w / 2 + 9, y + boy);
-        ctx.lineTo(w / 2, y + boy + 30 + Math.random() * 14);
+        ctx.lineTo(w / 2, y + boy + 30 + rng() * 14);
         ctx.fill();
       }
     }
@@ -798,6 +816,7 @@ function seyireGec() {
 
 function seyirKarar(guvenceSecildi) {
   const s = G.seyir;
+  logChallengeAction("seyir", { burn: guvenceSecildi === true });
   if (s.durum !== "bekleme") return;
   if (guvenceSecildi) {
     s.guvence = true;
@@ -806,7 +825,7 @@ function seyirKarar(guvenceSecildi) {
   const rizika = s.guvence ? 0.02 : 0.20;
   $("#seyir-karar").hidden = true;
   kaynakGuncelle();
-  if (Math.random() < rizika) {
+  if (rng() < rizika) {
     s.durum = "patlak";
     ses("hata");
     saatGuncelle("seyir kaybı");
@@ -850,7 +869,7 @@ function seyirCiz(dt) {
       ctx.beginPath();
       ctx.moveTo(x + g / 2 - 4, y + boy - 6);
       ctx.lineTo(x + g / 2 + 4, y + boy - 6);
-      ctx.lineTo(x + g / 2, y + boy + 14 + Math.random() * 8);
+      ctx.lineTo(x + g / 2, y + boy + 14 + rng() * 8);
       ctx.fill();
     }
   }
@@ -887,14 +906,18 @@ function iniseGec() {
 
 function inisTusKur() {
   const c = $("#inis-kanvas");
+  const inisKeyLog = ["Space","ArrowUp","KeyW","KeyS","ArrowDown","ArrowLeft","KeyA","ArrowRight","KeyD"];
   document.addEventListener("keydown", (e) => {
     if (G.faz !== "inis") return;
+    if (inisKeyLog.includes(e.code)) logChallengeAction("inisKey", { key: e.code, down: true });
     if (e.code === "Space" || e.code === "KeyW" || e.key === "ArrowUp") { e.preventDefault(); if (!e.repeat) { sesAc(); inisTuslari.itki = true; } }
     else if (e.code === "KeyS" || e.key === "ArrowDown") { e.preventDefault(); if (!e.repeat) { sesAc(); inisTuslari.yarim = true; } }
     else if (e.key === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); inisTuslari.sol = true; }
     else if (e.key === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); inisTuslari.sag = true; }
   });
   document.addEventListener("keyup", (e) => {
+    const inisKeyLog = ["Space","ArrowUp","KeyW","KeyS","ArrowDown","ArrowLeft","KeyA","ArrowRight","KeyD"];
+    if (inisKeyLog.includes(e.code)) logChallengeAction("inisKey", { key: e.code, down: false });
     if (e.code === "Space" || e.code === "KeyW" || e.key === "ArrowUp") inisTuslari.itki = false;
     else if (e.code === "KeyS" || e.key === "ArrowDown") inisTuslari.yarim = false;
     else if (e.key === "ArrowLeft" || e.code === "KeyA") inisTuslari.sol = false;
@@ -939,7 +962,8 @@ function inisCiz(dt) {
 
   if (!L) return;
   const im = resim("inis_aracı");
-  const boy = 66, g = boy * (im.naturalWidth / im.naturalHeight);
+  const boy = 66;
+  const g = im && im.complete && im.naturalWidth ? boy * (im.naturalWidth / im.naturalHeight) : boy;
 
   if (i.durum === "inis") {
     const cer = Math.min(dt, 0.05);
@@ -978,14 +1002,14 @@ function inisCiz(dt) {
     $("#inis-yakit").textContent = Math.round(L.yakit);
   }
 
-  if (i.durum !== "kaza" && im.complete) {
+  if (i.durum !== "kaza" && im && im.complete) {
     ctx.drawImage(im, L.x, L.y, g, boy);
     if (i.durum === "inis" && (inisTuslari.itki || inisTuslari.yarim) && L.yakit > 0) {
       ctx.fillStyle = "#F2C130";
       ctx.beginPath();
       ctx.moveTo(L.x + g / 2 - 7, L.y + boy - 18);
       ctx.lineTo(L.x + g / 2 + 7, L.y + boy - 18);
-      ctx.lineTo(L.x + g / 2, L.y + boy + 16 + Math.random() * 10);
+      ctx.lineTo(L.x + g / 2, L.y + boy + 16 + rng() * 10);
       ctx.fill();
     }
   }
@@ -1160,6 +1184,7 @@ function yuzeyOzetYaz() {
 }
 
 function solYurut() {
+  logChallengeAction("sol", {});
   const y = G.yuzey;
   if (y.bitti || y.pilBitti) return;
   const gunluk = [];
@@ -1204,7 +1229,7 @@ function solYurut() {
 
   const sakinMi = modDeger("sakin") !== null;
   const meteoritSans = sakinMi ? 0 : (modDeger("hasatCarpan") === 1.5 ? 0.20 : 0.10);
-  const zar = Math.random();
+  const zar = rng();
   if (zar < meteoritSans) {
     y.pil = sinir(0, y.pil - 8, y.pilKap);
     gunluk.push("MİKROMETEORİT — pil −8 birim.");
@@ -1254,6 +1279,7 @@ function solYurut() {
 }
 
 function veriIlet() {
+  logChallengeAction("veri", {});
   const y = G.yuzey;
   const guc = gucHesapla();
   if (!guc.link) {
@@ -1296,9 +1322,19 @@ function raporYuzeyden(baslik, ozet) {
   raporaGec(baslik, ozet, "yuzey");
 }
 
+function computeScore(kaynak) {
+  if (kaynak === "firlatma") return { puan: 0, basarili: false };
+  if (kaynak === "seyir") return { puan: G.firlatma.dogruluk * 20, basarili: false };
+  if (kaynak === "inis") return { puan: G.firlatma.dogruluk * 20, basarili: false };
+  let puan = G.firlatma.dogruluk * 20 + G.inis.hassasiyet * 15 + G.yuzey.bilim + (BUTCE - butceHarca()) * 0.6;
+  if (G.brif && brifDurumu().basarili) puan += G.brif.odul;
+  return { puan, basarili: true };
+}
+
 /* ============ RAPOR ============ */
 function raporaGec(baslik, ozet, kaynak) {
   ekranAc("rapor");
+  G.raporKaynak = kaynak;
   const satirlar = [];
   let puan = 0;
   let basarili;
@@ -1310,11 +1346,13 @@ function raporaGec(baslik, ozet, kaynak) {
     satirlar.push(["Öğretiler", "küçük araç hızlı pencere taşır; büyük araç affedicidir", "—"]);
   } else if (kaynak === "seyir") {
     basarili = false;
+    puan = G.firlatma.dogruluk * 20;
     satirlar.push(["Fırlatma", say(G.firlatma.dogruluk * 100, 0) + " pencere hassasiyeti", "+" + say(G.firlatma.dogruluk * 20, 0)]);
     satirlar.push(["Seyir", "yakıt ayırılmadı, arabulucu atış yapılamadı, araç kayboldu", "0"]);
     satirlar.push(["Öğretiler", "yakıt her fazın sigortasıdır — inişe de seyire de pay ayır", "—"]);
   } else if (kaynak === "inis") {
     basarili = false;
+    puan = G.firlatma.dogruluk * 20;
     satirlar.push(["Fırlatma", say(G.firlatma.dogruluk * 100, 0) + " pencere hassasiyeti", "+" + say(G.firlatma.dogruluk * 20, 0)]);
     satirlar.push(["İniş", "gövde teması emniyet sınırlarını aştı; modül mandalları koptu", "0"]);
     satirlar.push(["Öğretiler", "düşüş hızı sınırı 25 m/s, yan hız 10 m/s — geç yakıt yakmak bedel ödetir", "—"]);
@@ -1323,22 +1361,18 @@ function raporaGec(baslik, ozet, kaynak) {
     const guc = gucHesapla();
     satirlar.push(["Hedef", G.hedef.ad + " (" + G.hedef.atmosfer + " atmosfer, çekim " + G.hedef.cekim + " birim)", "—"]);
     satirlar.push(["Fırlatma", say(G.firlatma.dogruluk * 100, 0) + " pencere hassasiyeti", "+" + say(G.firlatma.dogruluk * 20, 0)]);
-    puan += G.firlatma.dogruluk * 20;
     satirlar.push(["İniş", say(G.inis.hassasiyet * 100, 0) + " bölge hassasiyeti", "+" + say(G.inis.hassasiyet * 15, 0)]);
-    puan += G.inis.hassasiyet * 15;
     satirlar.push(["Toplanan bilim", say(y.bilim, 0) + " birim", "+" + say(y.bilim, 0)]);
-    puan += y.bilim;
     if (!guc.link) satirlar.push(["Anten yok", "tampon Dünya'ya gidemedi — bilimin yarısı öldü", "—"]);
     else if (y.tampon > 0.001) satirlar.push(["Kalan tampon", say(y.tampon, 0) + " birim (yarısı sayıldı)", "—"]);
     const kalan = BUTCE - butceHarca();
     satirlar.push(["Bütçe ekonomisi", say(kalan) + " M$ rezerve", "+" + say(kalan * 0.6, 0)]);
-    puan += kalan * 0.6;
     if (G.brif) {
       const d = brifDurumu();
       satirlar.push(["Görev brifingi", G.brif.ad + " (" + G.brif.kod + ") — " + d.metin,
         d.basarili ? "+" + G.brif.odul : "—"]);
-      if (d.basarili) puan += G.brif.odul;
     }
+    puan = computeScore("yuzey").puan;
     basarili = true;
   }
 
@@ -1409,18 +1443,122 @@ function raporaGec(baslik, ozet, kaynak) {
   } catch (_) { /* yalnız modda rekor yok */ }
 
   saatGuncelle(basarili ? "görev tamamlandı" : "görev kaybı");
+  updateChallengeReportUI();
   if (kaynak === "yuzey") G.yuzey.bitti = true;
+}
+
+const OFFICIAL_CHALLENGE_SEED = 1337;
+
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function criarRng(seed) { return mulberry32(seed); }
+
+function logChallengeAction(type, data) {
+  if (!G.challenge || !G.challenge.log) return;
+  G.challenge.log.push({ t: G.clock || 0, type, ...(data || {}) });
+}
+
+function applyOfficialAction(a) {
+  if (!a || !a.type) return;
+  switch (a.type) {
+    case "brifing": {
+      const m = (G.misyonlar || [])[a.index];
+      if (m) { G.brif = m; G.hedef = m.gokCisim || HEDEFLER[0]; }
+      return;
+    }
+    case "arac": {
+      const arac = ARACLAR.find(x => x.anahtar === a.anahtar);
+      if (arac) G.arac = arac;
+      return;
+    }
+    case "modul": {
+      const modul = MODULLER.find(x => x.anahtar === a.anahtar);
+      if (modul) { G.modul = modul; G.yakit = modul.yakit; }
+      return;
+    }
+    case "donanim": {
+      G.donanim = new Set(a.keys || []);
+      return;
+    }
+    case "tasarimOnay": {
+      firlatmayaGec();
+      return;
+    }
+    case "launchClick": {
+      firlatmaTikla();
+      return;
+    }
+    case "seyir": {
+      seyirKarar(a.burn === true);
+      return;
+    }
+    case "inisKey": {
+      if (typeof inisTuslari === "undefined") return;
+      if (a.key === "KeyW") inisTuslari.itki = !!a.down;
+      else if (a.key === "KeyS") inisTuslari.yarim = !!a.down;
+      else if (a.key === "KeyA") inisTuslari.sol = !!a.down;
+      else if (a.key === "KeyD") inisTuslari.sag = !!a.down;
+      return;
+    }
+    case "sol": {
+      solYurut();
+      return;
+    }
+    case "veri": {
+      veriIlet();
+      return;
+    }
+    default:
+      return;
+  }
+}
+
+function runOfficialChallenge(seed, actions) {
+  challengeRandom = criarRng(seed);
+  G = freshState();
+  G.clock = 0;
+  G.misyonlar = misyonlariUret();
+  G.challenge = { seed, official: true };
+  const acts = (actions || []).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+  const dt = 1 / 60;
+  let t = 0, i = 0;
+  while (i < acts.length && t < 720) {
+    const target = typeof acts[i].t === "number" ? acts[i].t : t;
+    while (t < target) { const step = Math.min(dt, target - t); advanceGame(step); t += step; }
+    applyOfficialAction(acts[i]);
+    i++;
+  }
+  while (G.faz !== "rapor" && t < 720) { advanceGame(dt); t += dt; }
+  if (G.faz !== "rapor") {
+    return { ok: false, puan: 0, basarili: false, seconds: Math.round(t * 1000) / 1000 };
+  }
+  const kaynak = G.raporKaynak || "yuzey";
+  const sc = computeScore(kaynak);
+  const puan = Math.round(sc.puan * 10) / 10;
+  return { ok: true, puan, basarili: sc.basarili, faz: G.faz, seconds: Math.round(t * 1000) / 1000 };
 }
 
 /* ============ ana döngü ============ */
 let sonZaman = 0;
-function dondur(zaman) {
-  const dt = Math.min(0.05, (zaman - sonZaman) / 1000 || 0.016);
-  sonZaman = zaman;
+function advanceGame(dt) {
+  G.clock = (G.clock || 0) + dt;
   if (G.faz === "firlatma") firlatmaCiz(dt);
   else if (G.faz === "seyir") seyirCiz(dt);
   else if (G.faz === "inis") inisCiz(dt);
   else if (G.faz === "tasarim") tasarimCiz();
+  else if (G.faz === "yuzey") yuzeyCiz();
+}
+function dondur(zaman) {
+  const dt = Math.min(0.05, (zaman - sonZaman) / 1000 || 0.016);
+  sonZaman = zaman;
+  advanceGame(dt);
   requestAnimationFrame(dondur);
 }
 
@@ -1429,6 +1567,25 @@ function bagla() {
   $("#btn-giris").addEventListener("click", () => {
     sesAc(); ses("onay");
     ekranAc("brif");
+  });
+  $("#btn-official").addEventListener("click", () => {
+    sesAc(); ses("onay");
+    startOfficialChallenge();
+  });
+  $("#btn-leaderboard").addEventListener("click", () => {
+    sesAc(); ses("tik");
+    showLeaderboardPopup(true);
+    refreshLeaderboardPopup();
+  });
+  $("#leaderboard-cancel").addEventListener("click", () => showLeaderboardPopup(false));
+  $("#leaderboard-close").addEventListener("click", () => showLeaderboardPopup(false));
+  $("#leaderboard-popup").addEventListener("click", (e) => {
+    if (e.target.id === "leaderboard-popup") showLeaderboardPopup(false);
+  });
+  $("#leaderboard-form").addEventListener("submit", (event) => saveOfficialScore(event));
+  $("#btn-lider-kaydet").addEventListener("click", () => {
+    sesAc(); ses("onay");
+    showLeaderboardPopup(true);
   });
   $("#btn-brif-menu").addEventListener("click", () => {
     sesAc(); ses("tik");
@@ -1492,6 +1649,147 @@ function bagla() {
   });
 }
 
+const OFFICIAL_CHALLENGE_KEY = "0x4AAAAAAFzihhflQW6bQ3-I";
+let pendingLeaderboardToken = "";
+
+async function startOfficialChallenge() {
+  try {
+    const cevap = await fetch("/api/challenge", { cache: "no-store" });
+    if (!cevap.ok) throw new Error("challenge error " + cevap.status);
+    const data = await cevap.json();
+    challengeRandom = criarRng(data.seed);
+    setGlobalG(freshState());
+    G.clock = 0;
+    G.challenge = { official: true, challengeId: data.challengeId, seed: data.seed, log: [] };
+    G.misyonlar = misyonlariUret();
+    misyonKartlariCiz();
+    $("#btn-brif-tasarim").disabled = true;
+    ekranAc("brif");
+    saatGuncelle("Official Challenge — önce bir brifing seç");
+  } catch (hata) {
+    console.error("official challenge başlatılamadı", hata);
+    hourDefault("Challenge sunucudan yanıt alamadı — biraz sonra tekrar dene.", true);
+  }
+}
+
+function hourDefault(msg, show) {
+  const el = $("#leaderboard-hata");
+  if (el) el.textContent = msg || "";
+  const pop = $("#leaderboard-popup");
+  if (pop && show) pop.hidden = false;
+}
+
+async function refreshLeaderboardPopup() {
+  const list = $("#leaderboard-list");
+  const items = $("#leaderboard-items");
+  if (!list || !items) return;
+  list.hidden = false;
+  $("#leaderboard-form").hidden = true;
+  items.innerHTML = "";
+  try {
+    const cevap = await fetch("/api/leaderboard", { cache: "no-store" });
+    const data = await cevap.json();
+    (data.rows || []).forEach((row) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "lb-name";
+      name.textContent = row.alias;
+      const meta = document.createElement("span");
+      meta.className = "lb-score";
+      meta.textContent = Number(row.score).toFixed(1) + " puan";
+      li.appendChild(name);
+      li.appendChild(meta);
+      items.appendChild(li);
+    });
+    if (items.children.length === 0) {
+      const li = document.createElement("li");
+      li.innerHTML = "<span class='lb-name'>Henüz kayıt yok — ilk resmi skoru sen yap.</span>";
+      items.appendChild(li);
+    }
+  } catch (hata) {
+    const li = document.createElement("li");
+    li.innerHTML = "<span class='lb-name'>Sıralama yüklenemedi.</span>";
+    items.appendChild(li);
+  }
+}
+
+function resetLeaderboardForm() {
+  const form = $("#leaderboard-form");
+  const list = $("#leaderboard-list");
+  const alias = $("#leaderboard-alias");
+  const hata = $("#leaderboard-hata");
+  if (form) form.hidden = false;
+  if (list) list.hidden = true;
+  if (alias) alias.value = "";
+  if (hata) hata.textContent = "";
+  const cont = $("#turnstile-container");
+  if (cont) {
+    cont.innerHTML = "";
+    if (window.turnstile) {
+      pendingLeaderboardToken = "";
+      window.turnstile.render(cont, {
+        sitekey: OFFICIAL_CHALLENGE_KEY,
+        action: "official-score",
+        theme: "dark",
+        callback: (t) => { pendingLeaderboardToken = t; },
+        "expired-callback": () => { pendingLeaderboardToken = ""; },
+        "error-callback": () => { hourDefault("Captcha doğrulaması alınamadı.", false); },
+      });
+    }
+  }
+}
+
+async function saveOfficialScore(event) {
+  event.preventDefault();
+  const aliasEl = $("#leaderboard-alias");
+  const alias = String(aliasEl ? aliasEl.value : "").trim();
+  if (!alias) { hourDefault("Rumuz yazmalısın.", false); return; }
+  if (!/^[A-Za-zÇĞİÖŞÜçğıöşü0-9 ._-]{1,24}$/.test(alias)) { hourDefault("Rumuz yalnızca harf, rakam, nokta ve tire içermeli (en fazla 24 karakter).", false); return; }
+  const hata = $("#leaderboard-hata");
+  if (!G.challenge || !G.challenge.challengeId) { hourDefault("Bu sonuç challenge değil.", false); return; }
+  if (!pendingLeaderboardToken) { if (hata) hata.textContent = "Captcha doğrulamasını bekle."; return; }
+  const score = computeScore(G.raporKaynak || "yuzey").puan;
+  if (!Number.isFinite(score)) { if (hata) hata.textContent = "Skor hesaplanamadı."; return; }
+  const payload = {
+    challengeId: G.challenge.challengeId,
+    alias,
+    actions: G.challenge.log || [],
+    turnstile: pendingLeaderboardToken,
+    durationMs: Math.round((G.clock || 0) * 1000),
+  };
+  try {
+    const cevap = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify(payload),
+    });
+    const data = await cevap.json();
+    if (!cevap.ok) { if (hata) hata.textContent = data.error || "Kayıt reddedildi."; return; }
+    await refreshLeaderboardPopup();
+  } catch (err) {
+    if (hata) hata.textContent = "Sunucuya ulaşılamadı.";
+  }
+}
+
+function showLeaderboardPopup(show) {
+  const pop = $("#leaderboard-popup");
+  if (!pop) return;
+  pop.hidden = !show;
+  if (show) resetLeaderboardForm();
+}
+
+function updateChallengeReportUI() {
+  const block = $("#rapor-challenge");
+  if (!block) return;
+  const active = Boolean(G.challenge && G.challenge.official);
+  block.hidden = !active;
+  const msg = $("#rapor-challenge-msg");
+  if (active && msg) {
+    const sc = computeScore(G.raporKaynak || "yuzey").puan;
+    msg.textContent = "Official Challenge — skorun " + Math.round(sc * 10) / 10 + " puan. Resmi sıralamaya gir.";
+  }
+}
+
 function kur() {
   tumResimleriYukle();
   tasarimKur();
@@ -1515,4 +1813,8 @@ function kur() {
   requestAnimationFrame(dondur);
 }
 
-kur();
+if (typeof window !== "undefined" && !window.MENSPACE_REPLAY) {
+  kur();
+}
+
+export { runOfficialChallenge, OFFICIAL_CHALLENGE_SEED, freshState, computeScore };
