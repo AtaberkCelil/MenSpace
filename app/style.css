@@ -263,6 +263,244 @@ body {
   color: var(--teal);
 }
 
+/* ---------- görev brifingi kartları ---------- */
+
+.gorev-secim { margin: 22px 0 16px; }
+
+.gorev-secim-baslik {
+  font-family: var(--fd);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gorev-secim-baslik span {
+  font-family: var(--fm);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--murekkep-2);
+}
+
+.gorev-liste {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gorev-kart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  background: var(--kagit-2);
+  border: 3px solid var(--murekkep);
+  border-radius: 10px;
+  padding: 10px 11px;
+  cursor: pointer;
+  font-family: var(--ft);
+  color: var(--murekkep);
+  transition: background 100ms ease-out;
+}
+
+.gorev-kart:hover { background: #FFFDF5; }
+
+.gorev-kart.secili {
+  background: var(--sari-zemin);
+  box-shadow: inset 0 0 0 2px var(--sari);
+}
+
+.gorev-ust {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gorev-kod {
+  font-family: var(--fm);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--murekkep-2);
+}
+
+.gorev-zorluk {
+  font-family: var(--fm);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 2px solid var(--murekkep);
+  border-radius: 20px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.gorev-zorluk.z1 { background: #DCEDE2; }
+.gorev-zorluk.z2 { background: var(--sari-zemin); }
+.gorev-zorluk.z3 { background: #F3D9D3; }
+
+.gorev-ad {
+  font-family: var(--fd);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.gorev-hedef {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--fm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.gorev-hedef img { width: 26px; height: 26px; object-fit: contain; flex: none; }
+
+.brif-gok-cisim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--murekkep-2);
+}
+
+.brif-gok-cisim img { object-fit: contain; flex: none; }
+
+.gorev-metin {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--murekkep);
+}
+
+.gorev-modlar {
+  font-family: var(--fm);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--murekkep-2);
+  border-top: 1px dashed var(--cizgi);
+  padding-top: 6px;
+}
+
+.gorev-alt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.gorev-sure {
+  font-family: var(--fm);
+  font-size: 10px;
+  color: var(--murekkep-2);
+}
+
+.gorev-sec {
+  font-family: var(--fm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.gorev-oneri {
+  font-family: var(--fm);
+  font-size: 10px;
+  color: var(--teal);
+  border-top: 1px dashed var(--cizgi);
+  padding-top: 5px;
+}
+
+/* ---------- tasarım ekranındaki brifing kartı ---------- */
+
+.brif-kart {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-color: var(--murekkep);
+  background: var(--sari-zemin);
+}
+
+.brif-ust {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brif-ust h3 {
+  font-family: var(--fd);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.brif-hedef {
+  margin: 6px 0 4px;
+  font-size: 13px;
+}
+
+.brif-modlar {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-family: var(--fm);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--murekkep-2);
+}
+
+.onerilen {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px dashed var(--cizgi);
+  padding-top: 8px;
+}
+
+.onerilen-baslik {
+  font-family: var(--fm);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--murekkep-2);
+}
+
+.onerilen-liste { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.onerilen-chip {
+  font-family: var(--fm);
+  font-size: 11px;
+  border: 2px solid var(--murekkep);
+  border-radius: 20px;
+  padding: 1px 9px;
+  background: var(--kagit);
+}
+
+.onerilen-chip b { font-weight: 700; }
+.onerilen-chip.var { background: #DCEDE2; }
+.onerilen-chip.var b { color: var(--teal); }
+.onerilen-chip.yok { border-style: dashed; color: var(--murekkep-2); }
+.onerilen-chip.yok b { color: var(--damga); }
+
+.brif-ilerleme { color: var(--teal); font-weight: 600; }
+.brif-ilerleme.tamam { color: var(--teal); }
+
 .giris .btn { margin-top: 6px; }
 
 /* ---------- tasarım ekranı ---------- */
@@ -417,7 +655,6 @@ input[type="checkbox"] {
 }
 
 .kanvas-cerceve { margin-bottom: 12px; }
-.kanvas-cerceve.kisa canvas { }
 
 .mini-mudahale {
   display: flex;
@@ -497,9 +734,11 @@ input[type="checkbox"] {
 .guc-cubugu-ic {
   height: 100%;
   background: var(--sari);
-  width: 50%;
+  width: 100%;
   border-right: 2px solid var(--murekkep);
-  transition: width 200ms ease-out;
+  transform-origin: left;
+  transform: scaleX(0.5);
+  transition: transform 200ms ease-out;
 }
 
 .guc-cubugu-ic.boscak { background: var(--damga); border-right: none; }
@@ -613,6 +852,7 @@ input[type="checkbox"] {
   .montaj-hucresi { grid-column: 1 / -1; order: -1; position: static; }
   .yuzey-izgara { grid-template-columns: 1fr; }
   .durum { max-width: 100%; }
+  .gorev-liste { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ay Görevi — Görev Tasarım Simülatörü</title>
-  <meta name="description" content="NASA Space Apps mücadelesi için görev tasarım simülatörü: aracı tasarla, fırlat, Ay'a in, yüzey bilimi yap.">
+  <title>MenSpace — Görev Tasarım </title>
+  <meta name="description" content="NASA Space Apps mücadelesi için MenSpace: görev tasarım simülatörü — aracı tasarla, fırlat, Ay'a in, yüzey bilimi yap.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
     <header class="ust">
       <div class="ust-baslik">
         <img src="assets/ay.png" alt="" width="34" height="33">
-        <h1>Ay Görevi</h1>
+        <h1>MenSpace</h1>
         <span class="ust-alt">görev tasarım simülatörü</span>
       </div>
       <div class="ust-saat" id="gorev-saat" aria-label="görev saati">—</div>
@@ -38,18 +38,37 @@
           Öğrenciler genelde bütün bir görevi baştan sona deneme şansı bulamıyor; buradaki
           her karar — fırlatma aracı, bilim yükü, güç sistemi — görevinin sonunu değiştiriyor.</p>
           <ol class="giris-akis">
-            <li><span>1</span> Aracını ve bilim yükünü mühendislik kısıtları içinde tasarla.</li>
-            <li><span>2</span> Fırlatma penceresini doğru anda yakala — araç güvenilirliği sana izin verir.</li>
-            <li><span>3</span> Ay'a inişi elle yap; yakıt bitmeden, pervane kırılmadan.</li>
-            <li><span>4</span> Yüzeyde enstrümanları gezdire, pil bitmeden veriyi Dünya'ya ilet.</li>
+            <li><span>1</span> Görev brifingini seç — her koşuda hedef ve ortam değişiyor.</li>
+            <li><span>2</span> Aracını ve bilim yükünü mühendislik kısıtları içinde tasarla.</li>
+            <li><span>3</span> Fırlatma penceresini doğru anda yakala — araç güvenilirliği sana izin verir.</li>
+            <li><span>4</span> Ay'a inişi elle yap; yakıt bitmeden, pervane kırılmadan.</li>
+            <li><span>5</span> Yüzeyde enstrümanları gezdire, pil bitmeden veriyi Dünya'ya ilet.</li>
           </ol>
+          <div class="gorev-secim">
+            <h3 class="gorev-secim-baslik">Görev brifingi <span>her koşuda üç yeni görev</span></h3>
+            <div class="gorev-liste" id="gorev-liste" role="radiogroup" aria-label="görev seçimi"></div>
+          </div>
           <p class="giris-not tabular" id="rekor-satir" hidden>En iyi görev puanı: <b id="rekor-deger">—</b></p>
-          <button class="btn ana" id="btn-giris" type="button">Kontrol kabinine gir →</button>
+          <button class="btn ana" id="btn-giris" type="button" disabled>Önce bir görev seç</button>
         </div>
       </section>
 
       <!-- TASARIM -->
       <section class="ekran" id="ekran-tasarim" aria-label="görev tasarımı">
+        <div class="kart brif-kart" id="brif-kart" hidden>
+          <div class="brif-ust">
+            <span class="gorev-kod" id="brif-kod">—</span>
+            <h3 id="brif-ad">—</h3>
+            <span class="gorev-zorluk" id="brif-zorluk">—</span>
+          </div>
+          <p class="brif-hedef" id="brif-hedef">—</p>
+          <p class="brif-gok-cisim"><img id="brif-gok-cisim" src="" alt="" width="28" height="28"><span id="brif-gok-cisim-yazi">—</span></p>
+          <ul class="brif-modlar" id="brif-modlar"></ul>
+          <div class="onerilen">
+            <span class="onerilen-baslik">Önerilen kit</span>
+            <div class="onerilen-liste" id="onerilen-liste"></div>
+          </div>
+        </div>
         <div class="bina-izgara">
           <div class="hucre">
             <h2 class="bolum-baslik">Fırlatma aracı</h2>
@@ -120,6 +139,7 @@
           <div class="kart yuzey-genis">
             <h3 id="yuzey-gunosu">Söl 1</h3>
             <p class="tabular gun-ozet" id="yuzey-ozet">—</p>
+            <p class="tabular gun-ozet brif-ilerleme" id="yuzey-brif">—</p>
             <div class="guc-cubugu" aria-label="pil durumu">
               <div id="yuzey-pil" class="guc-cubugu-ic"></div>
             </div>
@@ -160,8 +180,7 @@
     </main>
 
     <footer class="alt-not tabular">
-      NASA Space Apps mücadelesi · önyüzün çizimleri ekip tarafından, oyun tek dosyada kuruludur
-    </footer>
+      MenSpace · NASA Space Apps mücadelesi · Menecigi takımı
   </div>
   <script src="game.js"></script>
 </body>
