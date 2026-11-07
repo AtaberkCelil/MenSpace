@@ -40,7 +40,15 @@
 
 * { box-sizing: border-box; }
 
-html, body { margin: 0; }
+img, canvas { max-width: 100%; height: auto; display: block; }
+
+html, body { margin: 0; overflow-x: hidden; }
+
+/* flex/grid çocuklarının taşmasını engelle */
+.faz-esas, .bina-izgara, .yuzey-izgara, .kanvas-cerceve, .menu-kutu, .lb-grid {
+  min-width: 0;
+}
+.hucre, .lb-account, .lb-board, .rapor, .kart { min-width: 0; }
 
 body {
   font-family: var(--ft);
@@ -52,6 +60,7 @@ body {
   background-size: 26px 26px;
   min-height: 100vh;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 .tabular { font-family: var(--fm); font-variant-numeric: tabular-nums; }
@@ -60,6 +69,8 @@ body {
   max-width: 1140px;
   margin: 0 auto;
   padding: 20px 20px 40px;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* ---------- üst şerit ---------- */
