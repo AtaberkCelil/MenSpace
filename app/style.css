@@ -759,6 +759,91 @@ input[type="checkbox"] {
 .islem-dugmeleri { display: grid; gap: 8px; }
 .islem-dugmeleri .btn { font-size: 14px; padding: 8px 12px; }
 
+/* rover */
+.rover-hud {
+  margin-top: 10px;
+  padding: 6px 8px;
+  border: 1px dashed var(--cizgi);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--murekkep);
+  background: rgba(74, 208, 227, 0.06);
+}
+
+.rover-kontrol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.rover-kontrol .btn { font-size: 14px; padding: 7px 12px; min-width: 88px; }
+.rover-ipucu { font-size: 11px; color: var(--murekkep-2); }
+.rover-durum { margin: 8px 0 0; color: var(--teal); }
+
+/* gezegenler arası uçuş */
+.gezegen-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(4, 7, 15, 0.78);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vw;
+}
+
+.gezegen-popup[hidden] { display: none; }
+
+.gezegen-popup-alim {
+  max-width: 620px;
+  width: 100%;
+  background: var(--kagit-2);
+  border: 2px solid var(--murekkep);
+  border-radius: 12px;
+  padding: 22px 24px;
+  color: var(--murekkep);
+}
+
+.gezegen-popup-alim h2 {
+  font-family: var(--fd);
+  margin: 0 0 10px;
+  font-size: 26px;
+}
+
+.gezegen-popup-alim p {
+  margin: 0 0 12px;
+  color: var(--murekkep-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.gezegen-liste { display: grid; gap: 8px; margin: 0 0 14px; }
+
+.gezegen-secim {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 2px solid var(--cizgi);
+  border-radius: 10px;
+  background: var(--kagit);
+  color: var(--murekkep);
+  font-family: var(--ft);
+  cursor: pointer;
+}
+
+.gezegen-secim img { width: 42px; height: 42px; object-fit: contain; flex: none; }
+.gezegen-secim:hover:not(:disabled) { border-color: var(--sari); }
+.gezegen-secim.secili { border-color: var(--sari); background: var(--sari-zemin); }
+.gezegen-secim:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.gezegen-metin { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--murekkep-2); }
+.gezegen-metin b { color: var(--murekkep); font-size: 14px; }
+
 .surec {
   margin: 14px 0 0;
   padding: 12px 14px;

@@ -29,6 +29,8 @@ const ctx2dStub = () => ({
   bezierCurveTo: noop,
   quadraticCurveTo: noop,
   arc: noop,
+  closePath: noop,
+  scale: noop,
 });
 const makeElement = () => ({
   className: "",
@@ -37,6 +39,8 @@ const makeElement = () => ({
   textContent: "",
   hidden: false,
   disabled: false,
+  width: 880,
+  height: 560,
   type: "button",
   style: {},
   children: [],
@@ -53,6 +57,7 @@ const makeElement = () => ({
   querySelectorAll: () => [],
   closest: () => null,
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }),
+  parentElement: { classList: classListStub() },
   getContext: () => ctx2dStub(),
 });
 const makeDocument = () => ({

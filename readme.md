@@ -123,7 +123,7 @@ Oyun doğrudan bir **ana menüyle** açılır; oradan “Göreve Başla” ile b
 | **Fırlatma** | Pencere göstergesinde ateşleme zamanını yakalarsın | Araç güvenilirliği ve pencere genişliği arasındaki bağ |
 | **Seyir** | Yakıtı arabulucu atış için ayırıp ayırmayacağına karar verirsin | Yakıtın her fazın sigortası olduğu |
 | **İniş** | Hedef gök cisminin çekimine karşı düşüş ve yan hızı sınırların içinde tutarak iniş yaparsın | Yumuşak inişin yakıt–hassasiyet denklemi, her cismin çekimi farklı |
-| **Yüzey** | Söl boyunca enstrümanları çalıştırıp veriyi iletirsin | Gündüz/gece döngüsü, depolama, veri tamponu, olaylar |
+| **Yüzey** | Söl boyunca enstrümanları çalıştırıp veriyi iletir, rover'ı sürerek veri ve güç hücresi toplarsın | Gündüz/gece döngüsü, depolama, veri tamponu, olaylar, gezegenler arası keşif |
 | **Rapor** | Not, puan ve brifing durumu | Hangi karar puanı yükseltti, hangisi bedel getirdi |
 
 ## Görev brifingleri
@@ -213,6 +213,15 @@ tercih edilir. Kasında'nın fazla yakıtı seyir fazında arabulucu atışı be
 - **Fırlatma:** `Boşluk` tuşu veya `FIRLAT` düğmesi (ilk tık geri sayımı başlatır, ikinci tık ateşler); `W` de aynı işlevi görür
 - **İniş:** `W`/`↑`/`Boşluk` = tam itki, `S`/`↓` = yarım itki, `A`/`←` ve `D`/`→` = yan itki; ekrana dokunmak tam itki verir
 - **Yüzey:** Enstrüman kutularını işaretle, `Sölü başlat` ile günü ilerlet, `Veriyi Dünya'ya gönder` ile tamponu boşalt
+- **Rover:** `A`/`←` geri, `D`/`→` ileri; ekrandaki `◀ geri` / `ileri ▶` düğmeleri dokunmatik için. Sürüş rover pilini harcar; yüzeydeki mavi veri kristalleri tampona veri, pil ikonları hem rover'a hem üsse güç ekler.
+- **Gezegenler arası uçuş:** Yüzeyde `Gezegenler arası uçuş →` düğmesini aç, hedef seç. Her uçuş yakıt ve üs gücü harcar (gücü rover ile toplarsın) ve varışta +8 bilim keşif bonusu verir; yeni yüzeyde rover için taze veri ve güç hücreleri oluşur. Tampondaki iletilmemiş veri uçuşta kaybolur.
+
+### Rover ve güç kurtarma
+
+Rover'ın kendi pili 60 birimdir ve sürüşte azalır. Üs pili bittiğinde görev hemen kapanmaz:
+rover hâlâ hareket edebiliyorsa yüzeydeki güç hücrelerini toplayıp üsse güç taşıyabilirsin.
+Güç geldiğinde söl ilerletme yeniden açılır. Hem rover hem üs pili tükendiğinde görev enerji
+kaybıyla sonlanır.
 
 ## Puanlama
 

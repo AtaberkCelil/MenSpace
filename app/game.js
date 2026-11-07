@@ -153,6 +153,8 @@ function freshState() {
       aktif: new Set(), gunesKesik: false, bitti: false, pilBitti: false,
       bayrakDikildi: false, antenArizasi: false,
       iletilen: 0, geceler: 0, kesintisiz: 0,
+      devam: false, gezegenSayisi: 1,
+      rover: null, dugumler: [],
     },
   };
 }
@@ -259,9 +261,10 @@ function yildizOrgu(ctx, w, h) {
   }
 }
 
-function yuzeySeridi(ctx, y, w, tint) {
+function yuzeySeridi(ctx, y, w, tint, offset) {
   const zemin = resim("ay_yuzeyi");
-  for (let x = 0; x < w; x += 86) {
+  const kaydir = offset ? ((offset % 86) + 86) % 86 : 0;
+  for (let x = -kaydir; x < w; x += 86) {
     if (zemin && zemin.complete && zemin.naturalWidth) ctx.drawImage(zemin, x, y, 86, 84);
     else { ctx.fillStyle = "#9BA0AE"; ctx.fillRect(x, y, 86, 84); }
   }
@@ -808,9 +811,9 @@ function seyireGec() {
   $("#seyir-karar-metin").textContent =
     G.yakit > 26
       ? "Yakıt tankın dolu: iniş için bolca var; bir atışı da seyir için ayırabilirsin."
-      : "Yakıt gergin: iniş için lazım — ama arabulucu atışı yapmazsan Ay sana uzak kalır.";
+      : "Yakıt gergin: iniş için lazım — ama arabulucu atışı yapmazsan " + G.hedef.ad + " sana uzak kalır.";
   $("#seyir-karar").hidden = false;
-  saatGuncelle("Dünya–Ay seyri");
+  saatGuncelle("Dünya–" + G.hedef.ad + " seyri");
   kaynakGuncelle();
 }
 
@@ -842,7 +845,8 @@ function seyirCiz(dt) {
   const s = G.seyir;
   s.t += dt;
   yildizOrgu(ctx, w, h);
-  const ilerleme = s.durum === "ucus" ? sinir(0, s.t / 5, 1) : 0.04;
+  const transfer = s.durum === "transfer";
+  const ilerleme = (s.durum === "ucus" || transfer) ? sinir(0, s.t / (transfer ? 4.6 : 5), 1) : 0.04;
 
   const dIm = resim("dunya");
   if (dIm && dIm.complete) {
@@ -864,7 +868,7 @@ function seyirCiz(dt) {
     const boy = 58, g = boy * (pIm.naturalWidth / pIm.naturalHeight);
     ctx.drawImage(pIm, x, y, g, boy);
     panelKanatlari(ctx, x + g / 2, g, y + boy, boy);
-    if (s.durum === "ucus") {
+    if (s.durum === "ucus" || transfer) {
       ctx.fillStyle = "#F2C130";
       ctx.beginPath();
       ctx.moveTo(x + g / 2 - 4, y + boy - 6);
@@ -873,18 +877,19 @@ function seyirCiz(dt) {
       ctx.fill();
     }
   }
+  if (transfer) etiket(ctx, "gezegenler arası uçuş · " + G.hedef.ad, w / 2, 52);
   if (s.durum === "patlak") {
     const p = resim("patlama");
     if (p && p.complete) ctx.drawImage(p, w / 2 - 86, h / 2 - 100, 172, 147);
     if (s.t > 2.4) {
       raporaGec("Seyir kaybı",
-        "Yakıt ayırmadın; seyir düzeltmesi yapılamadı ve araç Ay çekim alanında yörüngeden çıktı.",
+        "Yakıt ayırmadın; seyir düzeltmesi yapılamadı ve araç " + G.hedef.ad + " çekim alanında yörüngeden çıktı.",
         "seyir");
       return;
     }
   }
 
-  if (s.durum === "ucus" && s.t > 5.2) iniseGec();
+  if ((s.durum === "ucus" && s.t > 5.2) || (transfer && s.t > 4.7)) iniseGec();
 }
 
 /* ============ İNİŞ ============ */
@@ -900,7 +905,7 @@ function iniseGec() {
     vx: rast(-26, 26), vy: rast(12, 28),
     yakit: G.yakit, itus: G.modul.itus,
   };
-  saatGuncelle("Ay inişi — canlı telemetri");
+  saatGuncelle(G.hedef.ad + " inişi — canlı telemetri");
   kaynakGuncelle();
 }
 
@@ -1032,13 +1037,171 @@ function inisCiz(dt) {
   }
 }
 
+/* ============ ROVER ============ */
+const YUZEY_DUNYA_GENISLIK = 2600;
+const YUZEY_US_X = 300;
+const roverTuslari = { sol: false, sag: false };
+
+function roverHazirla() {
+  const y = G.yuzey;
+  y.rover = { x: YUZEY_US_X + 150, pil: 60, pilKap: 60, veri: 0, mesafe: 0, yon: 1, hiz: 0 };
+  y.dugumler = [];
+  for (let i = 0; i < 6; i++) roverDugumEkle(i % 2 === 0 ? "veri" : "pil");
+  roverHudYaz();
+}
+
+function roverDugumEkle(tip) {
+  const y = G.yuzey;
+  if (!y.rover) return;
+  let x = rast(420, YUZEY_DUNYA_GENISLIK - 120);
+  if (y.dugumler.some((d) => !d.alindi && Math.abs(d.x - x) < 130)) {
+    x = sinir(420, x + 240, YUZEY_DUNYA_GENISLIK - 120);
+  }
+  y.dugumler.push({
+    id: y.dugumler.length + "-" + Math.round(x),
+    tip: tip,
+    x: x,
+    alindi: false,
+    deger: tip === "veri" ? Math.round(rast(6, 12)) : Math.round(rast(18, 30)),
+  });
+}
+
+function roverKurtarmaVar() {
+  const y = G.yuzey;
+  return Boolean(y.rover && y.rover.pil > 0 && y.dugumler.some((d) => !d.alindi && d.tip === "pil"));
+}
+
+function roverDurumYaz(metin) {
+  const el = $("#rover-durum");
+  if (el) el.textContent = metin;
+}
+
+function roverHudYaz() {
+  const y = G.yuzey;
+  const r = y.rover;
+  const hud = $("#rover-hud");
+  if (!hud || !r) return;
+  hud.textContent = "Rover · pil " + Math.round(r.pil) + "/" + r.pilKap +
+    " · veri " + r.veri + " · " + Math.round(r.mesafe) + " m · gezegen " + y.gezegenSayisi;
+}
+
+function roverDugumTopla() {
+  const y = G.yuzey;
+  const r = y.rover;
+  if (!r) return;
+  y.dugumler.forEach((d) => {
+    if (d.alindi || Math.abs(d.x - r.x) > 48) return;
+    d.alindi = true;
+    if (d.tip === "veri") {
+      y.tampon += d.deger;
+      r.veri += d.deger;
+      roverDurumYaz("Veri örneği toplandı: +" + d.deger + " birim tampon.");
+    } else {
+      const roverSarz = Math.round(d.deger * 0.6);
+      y.pil = sinir(0, y.pil + d.deger, y.pilKap);
+      r.pil = sinir(0, r.pil + roverSarz, r.pilKap);
+      roverDurumYaz("Güç hücresi toplandı: üs +" + d.deger + ", rover +" + roverSarz + ".");
+      if (y.pilBitti && y.pil > 0) {
+        y.pilBitti = false;
+        const btn = $("#btn-sol-basyaz");
+        if (btn) btn.disabled = false;
+        roverDurumYaz("GÜÇ GERİ GELDİ — üs yeniden açıldı, söl devam edebilir.");
+      }
+    }
+    ses("onay");
+  });
+}
+
+function roverGuncelle(dt) {
+  const y = G.yuzey;
+  const r = y.rover;
+  if (!r || y.bitti) return;
+  let yon = 0;
+  if (roverTuslari.sol) yon -= 1;
+  if (roverTuslari.sag) yon += 1;
+  if (yon !== 0 && r.pil > 0) {
+    r.yon = yon;
+    r.hiz = yon * 150;
+    r.x = sinir(60, r.x + r.hiz * dt, YUZEY_DUNYA_GENISLIK - 60);
+    r.pil = Math.max(0, r.pil - 2.2 * dt);
+    r.mesafe += Math.abs(r.hiz * dt);
+    roverDugumTopla();
+    if (r.pil <= 0) {
+      roverDurumYaz("ROVER PİLİ BİTTİ — güç hücresi toplamak için enerji kalmadı.");
+      if (y.pil <= 0.001 && y.tampon <= 0 && !y.bitti) {
+        y.bitti = true;
+        raporYuzeyden("Enerji tükendi", "Rover pili ve üs pili bitti; yüzey keşfi durdu.");
+      }
+    }
+  } else {
+    r.hiz = 0;
+  }
+}
+
+function roverTusKur() {
+  const tuslar = ["ArrowLeft", "KeyA", "ArrowRight", "KeyD"];
+  document.addEventListener("keydown", (e) => {
+    if (G.faz !== "yuzey" || !tuslar.includes(e.code)) return;
+    const pop = $("#gezegen-popup");
+    if (pop && !pop.hidden) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    logChallengeAction("roverKey", { key: e.code, down: true });
+    sesAc();
+    if (e.code === "ArrowLeft" || e.code === "KeyA") roverTuslari.sol = true;
+    else roverTuslari.sag = true;
+  });
+  document.addEventListener("keyup", (e) => {
+    if (!tuslar.includes(e.code)) return;
+    logChallengeAction("roverKey", { key: e.code, down: false });
+    if (e.code === "ArrowLeft" || e.code === "KeyA") roverTuslari.sol = false;
+    else if (e.code === "ArrowRight" || e.code === "KeyD") roverTuslari.sag = false;
+  });
+  const bas = (id, yon) => {
+    const b = $(id);
+    if (!b) return;
+    const ac = (e) => { e.preventDefault(); sesAc(); roverTuslari[yon] = true; };
+    const kapa = () => { roverTuslari[yon] = false; };
+    b.addEventListener("pointerdown", ac);
+    b.addEventListener("pointerup", kapa);
+    b.addEventListener("pointercancel", kapa);
+    b.addEventListener("pointerleave", kapa);
+  };
+  bas("#btn-rover-sol", "sol");
+  bas("#btn-rover-sag", "sag");
+}
+
+function yuzeyGuncelle(dt) {
+  if (G.faz !== "yuzey") return;
+  roverGuncelle(dt);
+}
+
 /* ============ YÜZEY ============ */
 function yuzeyeGec() {
   ekranAc("yuzey");
   const y = G.yuzey;
-  y.sol = 1; y.tampon = 0; y.bilim = 0; y.gunesKesik = false;
-  y.bitti = false; y.pilBitti = false; y.bayrakDikildi = false;
-  y.antenArizasi = false; y.iletilen = 0; y.geceler = 0; y.kesintisiz = 0;
+  const devam = y.devam === true;
+  const onceki = {
+    sol: y.sol, bilim: y.bilim, iletilen: y.iletilen, geceler: y.geceler,
+    gezegenSayisi: y.gezegenSayisi,
+  };
+  y.tampon = 0;
+  y.gunesKesik = false;
+  y.bitti = false;
+  y.pilBitti = false;
+  y.bayrakDikildi = false;
+  y.antenArizasi = false;
+  y.kesintisiz = 0;
+  if (devam) {
+    y.sol = onceki.sol;
+    y.bilim = onceki.bilim + 8;
+    y.iletilen = onceki.iletilen;
+    y.geceler = onceki.geceler;
+    y.gezegenSayisi = (onceki.gezegenSayisi || 1) + 1;
+  } else {
+    y.sol = 1; y.bilim = 0; y.iletilen = 0; y.geceler = 0; y.gezegenSayisi = 1;
+  }
+  y.devam = false;
   y.pilKap = 30; // araç bataryası
   G.donanim.forEach(a => {
     const d = DONANIM.find(x => x.anahtar === a);
@@ -1053,11 +1216,18 @@ function yuzeyeGec() {
       return d && d.bilim;
     })
   );
+  roverHazirla();
   $("#btn-sol-basyaz").disabled = false;
   yuzeyGecisleriKur();
   yuzeyCiz();
-  $("#yuzey-gunluk").textContent = "Yüzeye sağ çıktın. Cihazları aç, sölü başlat, veriyi zamanında ilet.";
-  saatGuncelle("Söl 1 / " + misyonSols());
+  if (devam) {
+    $("#yuzey-gunluk").textContent = G.hedef.ad + " yüzeyine indin. Keşif bonusu +8 bilim. Rover ile yeni veri ve güç hücreleri topla.";
+    roverDurumYaz("Yeni gezegen: " + G.hedef.ad + " — rover hazır.");
+  } else {
+    $("#yuzey-gunluk").textContent = "Yüzeye sağ çıktın. Cihazları aç, sölü başlat, veriyi zamanında ilet.";
+    roverDurumYaz("Rover hazır — yüzeyde veri ve güç hücresi ara.");
+  }
+  saatGuncelle("Söl " + y.sol + " / " + misyonSols());
   kaynakGuncelle();
 }
 
@@ -1104,50 +1274,12 @@ function yuzeyCiz() {
   const ctx = c.getContext("2d");
   const w = c.width, h = c.height;
   const y = G.yuzey;
+  const r = y.rover;
   yildizOrgu(ctx, w, h);
   const zeminY = h - 62;
-  yuzeySeridi(ctx, zeminY, w, G.hedef.zemin);
-  const dIm = resim("dunya");
-  if (dIm && dIm.complete) ctx.drawImage(dIm, 56, 26, 48, 48);
+  const kamera = r ? sinir(0, r.x - w * 0.38, YUZEY_DUNYA_GENISLIK - w) : 0;
+  yuzeySeridi(ctx, zeminY, w, G.hedef.zemin, kamera);
 
-  const bes = w / 2;
-  const m = resim("inis_aracı");
-  if (m && m.complete) ctx.drawImage(m, bes - 70, zeminY - 96, 62, 86);
-
-  const bIm = resim("bayrak");
-  if (y.bayrakDikildi && bIm && bIm.complete) ctx.drawImage(bIm, bes + 14, zeminY - 62, 38, 40);
-
-  const cihazlar = DONANIM.filter(d =>
-    G.donanim.has(d.anahtar) && !["bayrak", "pil", "panel", "anten_b", "anten_k"].includes(d.anahtar));
-  cihazlar.forEach((d, i) => {
-    const im = resim(d.anahtar);
-    if (!(im && im.complete)) return;
-    const boy = 64, g = Math.min(64, boy * (im.naturalWidth / im.naturalHeight));
-    const x = bes - 250 + i * 76;
-    ctx.globalAlpha = (y.aktif.has(d.anahtar) || !d.bilim) ? 1 : 0.4;
-    ctx.drawImage(im, x, zeminY - boy, g, boy);
-    ctx.globalAlpha = 1;
-    etiket(ctx, d.ad.toLowerCase() + (y.aktif.has(d.anahtar) ? "" : " · kapalı"), x + g / 2, zeminY + 24);
-  });
-
-  const aIm = resim(G.donanim.has("anten_b") ? "anten_b" : (G.donanim.has("anten_k") ? "anten_k" : null));
-  if (aIm && aIm.complete) {
-    const boy = 74, g = boy * (aIm.naturalWidth / aIm.naturalHeight);
-    ctx.drawImage(aIm, bes + 130, zeminY - boy, g, boy);
-    etiket(ctx, (G.donanim.has("anten_b") ? "büyük" : "küçük") + " anten", bes + 150 + g / 2 - 20, zeminY + 24);
-  }
-  const pIm = resim("panel");
-  if (G.donanim.has("panel") && pIm && pIm.complete) {
-    ctx.drawImage(pIm, bes - 170, zeminY - 70, 84, 63);
-  }
-  if (G.hedef.anahtar === "mars") {
-    const rIm = resim("mars_rover");
-    if (rIm && rIm.complete) {
-      const boy = 66, g = boy * (rIm.naturalWidth / rIm.naturalHeight);
-      ctx.drawImage(rIm, 18, zeminY - boy, g, boy);
-      etiket(ctx, "rover", 18 + g / 2, zeminY + 24);
-    }
-  }
   if (G.hedef.anahtar === "venus") {
     const vIm = resim("venus_bulut");
     if (vIm && vIm.complete) {
@@ -1156,6 +1288,89 @@ function yuzeyCiz() {
       ctx.globalAlpha = 1;
     }
   }
+
+  const dIm = resim("dunya");
+  if (dIm && dIm.complete) ctx.drawImage(dIm, 56, 26, 48, 48);
+
+  const usX = YUZEY_US_X - kamera;
+  if (usX > -280 && usX < w + 240) {
+    const m = resim("inis_aracı");
+    if (m && m.complete) ctx.drawImage(m, usX - 70, zeminY - 96, 62, 86);
+
+    const bIm = resim("bayrak");
+    if (y.bayrakDikildi && bIm && bIm.complete) ctx.drawImage(bIm, usX + 14, zeminY - 62, 38, 40);
+
+    const cihazlar = DONANIM.filter(d =>
+      G.donanim.has(d.anahtar) && !["bayrak", "pil", "panel", "anten_b", "anten_k"].includes(d.anahtar));
+    cihazlar.forEach((d, i) => {
+      const im = resim(d.anahtar);
+      if (!(im && im.complete)) return;
+      const boy = 64, g = Math.min(64, boy * (im.naturalWidth / im.naturalHeight));
+      const x = usX - 250 + i * 76;
+      ctx.globalAlpha = (y.aktif.has(d.anahtar) || !d.bilim) ? 1 : 0.4;
+      ctx.drawImage(im, x, zeminY - boy, g, boy);
+      ctx.globalAlpha = 1;
+      etiket(ctx, d.ad.toLowerCase() + (y.aktif.has(d.anahtar) ? "" : " · kapalı"), x + g / 2, zeminY + 24);
+    });
+
+    const aIm = resim(G.donanim.has("anten_b") ? "anten_b" : (G.donanim.has("anten_k") ? "anten_k" : null));
+    if (aIm && aIm.complete) {
+      const boy = 74, g = boy * (aIm.naturalWidth / aIm.naturalHeight);
+      ctx.drawImage(aIm, usX + 130, zeminY - boy, g, boy);
+      etiket(ctx, (G.donanim.has("anten_b") ? "büyük" : "küçük") + " anten", usX + 150 + g / 2 - 20, zeminY + 24);
+    }
+    const pIm = resim("panel");
+    if (G.donanim.has("panel") && pIm && pIm.complete) {
+      ctx.drawImage(pIm, usX - 170, zeminY - 70, 84, 63);
+    }
+    etiket(ctx, "üs · " + G.hedef.ad, usX, zeminY + 24);
+  }
+
+  (y.dugumler || []).forEach((d) => {
+    if (d.alindi) return;
+    const x = d.x - kamera;
+    if (x < -40 || x > w + 40) return;
+    if (d.tip === "pil") {
+      const im = resim("pil");
+      if (im && im.complete) {
+        const boy = 30, g = boy * (im.naturalWidth / im.naturalHeight);
+        ctx.drawImage(im, x - g / 2, zeminY - boy - 6, g, boy);
+      }
+      etiket(ctx, "güç +" + d.deger, x, zeminY + 18);
+    } else {
+      ctx.fillStyle = "#4ad0e3";
+      ctx.beginPath();
+      ctx.moveTo(x, zeminY - 44);
+      ctx.lineTo(x + 13, zeminY - 27);
+      ctx.lineTo(x, zeminY - 10);
+      ctx.lineTo(x - 13, zeminY - 27);
+      ctx.closePath();
+      ctx.fill();
+      etiket(ctx, "veri +" + d.deger, x, zeminY + 18);
+    }
+  });
+
+  if (r) {
+    const rx = r.x - kamera;
+    const rIm = resim("mars_rover");
+    if (rIm && rIm.complete) {
+      const boy = 58, g = boy * (rIm.naturalWidth / rIm.naturalHeight);
+      ctx.save();
+      if (r.yon < 0) {
+        ctx.translate(rx, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(rIm, -g / 2, zeminY - boy, g, boy);
+      } else {
+        ctx.drawImage(rIm, rx - g / 2, zeminY - boy, g, boy);
+      }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#C0392B";
+      ctx.fillRect(rx - 20, zeminY - 26, 40, 20);
+    }
+    etiket(ctx, "rover · " + Math.round(r.pil) + " pil", rx, zeminY + 24);
+  }
+
   yuzeyOzetYaz();
 }
 
@@ -1165,7 +1380,7 @@ function yuzeyOzetYaz() {
   const gunduzMu = (y.sol - 1) % 6 !== 5;
   const calisan = [...y.aktif].map(a => (DONANIM.find(d => d.anahtar === a) || {}).ad).join(", ");
   $("#yuzey-gunosu").textContent = "Söl " + Math.min(y.sol, toplamSol) + " / " + toplamSol +
-    (gunduzMu ? " — güneş açık" : " — AY GECESİ (panel çalışmaz)");
+    (gunduzMu ? " — güneş açık" : " — " + G.hedef.ad.toUpperCase() + " GECESİ (panel çalışmaz)");
   $("#yuzey-ozet").textContent =
     "Cihazlar: " + (calisan || "yok") + " · tampon " + say(y.tampon, 0) + " birim" +
     (y.gunesKesik ? " · GÜNEŞ KESİNTİSİ" : "") +
@@ -1181,6 +1396,7 @@ function yuzeyOzetYaz() {
     brifSatir.textContent = "Brifing · " + G.brif.ad + " — " + d.metin + (d.basarili ? " ✓" : "");
     brifSatir.classList.toggle("tamam", d.basarili);
   }
+  roverHudYaz();
 }
 
 function solYurut() {
@@ -1256,6 +1472,10 @@ function solYurut() {
 
   if (!gunduzMu) geceMi = true;
   y.sol++;
+  if (y.rover) {
+    roverDugumEkle("veri");
+    roverDugumEkle("pil");
+  }
   yuzeyCiz();
   $("#yuzey-gunluk").textContent = gunluk.join("\n") || "Söl sessiz geçti.";
   kaynakGuncelle();
@@ -1266,7 +1486,12 @@ function solYurut() {
     y.bitti = true;
     raporYuzeyden(toplamSol + " söl tamamlandı", "Görev planının tamamı işletildi; kapsül raporu kapattı.");
   } else if (y.pil <= 0.001) {
-    if (y.tampon > 0) {
+    if (roverKurtarmaVar()) {
+      y.pilBitti = true;
+      $("#btn-sol-basyaz").disabled = true;
+      $("#yuzey-gunluk").textContent += "\nPİL BOŞ — rover ile güç hücresi topla. Güç gelince üs yeniden açılır.";
+      roverDurumYaz("Üs pili boşaldı — rover ile güç hücresi topla.");
+    } else if (y.tampon > 0) {
       y.pilBitti = true;
       $("#btn-sol-basyaz").disabled = true;
       $("#yuzey-gunluk").textContent += "\nPİL BOŞ — enstrümanlar durdu. Son veriyi ilet; iletmek görevi kapatır.";
@@ -1313,6 +1538,86 @@ function veriIlet() {
     y.bitti = true;
     raporYuzeyden("Enerji tükendi", "Pil bitti; son iletim yapıldı ve kapsül kendini kapattı.");
   }
+}
+
+/* ============ GEZEGENLER ARASI UÇUŞ ============ */
+function transferMaliyeti(hedef) {
+  if (!hedef) return 99;
+  if (hedef.anahtar === "venus") return 8;
+  if (hedef.anahtar === "merkur") return 6;
+  if (hedef.anahtar === "mars") return 5;
+  return 4;
+}
+
+function transferGucMaliyeti(hedef) {
+  if (!hedef) return 99;
+  if (hedef.anahtar === "venus") return 24;
+  if (hedef.anahtar === "merkur") return 20;
+  if (hedef.anahtar === "mars") return 18;
+  return 15;
+}
+
+function gezegenListesiCiz() {
+  const kap = $("#gezegen-liste");
+  if (!kap) return;
+  kap.innerHTML = "";
+  HEDEFLER.forEach((h) => {
+    const maliyet = transferMaliyeti(h);
+    const gucMaliyet = transferGucMaliyeti(h);
+    const ayni = G.hedef.anahtar === h.anahtar;
+    const yeter = G.yakit >= maliyet && G.yuzey.pil >= gucMaliyet;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "gezegen-secim" + (ayni ? " secili" : "");
+    b.disabled = ayni || !yeter;
+    b.innerHTML =
+      '<img src="' + h.img + '" alt="">' +
+      '<span class="gezegen-metin"><b>' + h.ad + "</b>" +
+      "<span>" + h.atmosfer + " atmosfer · çekim " + h.cekim + "</span>" +
+      "<span>" + (ayni ? "şu an buradasın" : "yakıt −" + maliyet + " · güç −" + gucMaliyet + " · keşif +8 bilim") + "</span></span>";
+    if (!ayni && !yeter) b.title = "Kaynak yetersiz — " + maliyet + " yakıt ve " + gucMaliyet + " üs gücü gerekli.";
+    b.addEventListener("click", () => { sesAc(); ses("onay"); transferBaslat(h.anahtar); });
+    kap.appendChild(b);
+  });
+}
+
+function gezegenPopupAc(ac) {
+  const pop = $("#gezegen-popup");
+  if (!pop) return;
+  if (ac) gezegenListesiCiz();
+  pop.hidden = !ac;
+}
+
+function transferBaslat(anahtar) {
+  const hedef = HEDEFLER.find((h) => h.anahtar === anahtar);
+  if (!hedef || hedef.anahtar === G.hedef.anahtar) return;
+  const maliyet = transferMaliyeti(hedef);
+  const gucMaliyet = transferGucMaliyeti(hedef);
+  if (G.yakit < maliyet) {
+    roverDurumYaz("Yakıt yetersiz — " + hedef.ad + " için " + maliyet + " yakıt gerekli.");
+    ses("hata");
+    return;
+  }
+  if (G.yuzey.pil < gucMaliyet) {
+    roverDurumYaz("Üs gücü yetersiz — rover ile güç hücresi toplayıp " + gucMaliyet + " birime ulaş.");
+    ses("hata");
+    return;
+  }
+  logChallengeAction("transfer", { anahtar: anahtar });
+  G.yakit -= maliyet;
+  G.yuzey.pil -= gucMaliyet;
+  G.hedef = hedef;
+  G.yuzey.devam = true;
+  gezegenPopupAc(false);
+  ekranAc("seyir");
+  const s = G.seyir;
+  s.t = 0;
+  s.durum = "transfer";
+  s.guvence = true;
+  s.hedef = hedef;
+  $("#seyir-karar").hidden = true;
+  saatGuncelle(hedef.ad + " yolculuğu — " + maliyet + " yakıt, " + gucMaliyet + " güç harcandı");
+  kaynakGuncelle();
 }
 
 function raporYuzeyden(baslik, ozet) {
@@ -1363,6 +1668,8 @@ function raporaGec(baslik, ozet, kaynak) {
     satirlar.push(["Fırlatma", say(G.firlatma.dogruluk * 100, 0) + " pencere hassasiyeti", "+" + say(G.firlatma.dogruluk * 20, 0)]);
     satirlar.push(["İniş", say(G.inis.hassasiyet * 100, 0) + " bölge hassasiyeti", "+" + say(G.inis.hassasiyet * 15, 0)]);
     satirlar.push(["Toplanan bilim", say(y.bilim, 0) + " birim", "+" + say(y.bilim, 0)]);
+    if (y.rover) satirlar.push(["Rover keşfi", say(y.rover.veri, 0) + " birim veri · " + say(y.rover.mesafe, 0) + " m sürüş", "—"]);
+    if ((y.gezegenSayisi || 1) > 1) satirlar.push(["Gezegen ziyaretleri", y.gezegenSayisi + " gök cismi · keşif bonusları bilime dahil", "—"]);
     if (!guc.link) satirlar.push(["Anten yok", "tampon Dünya'ya gidemedi — bilimin yarısı öldü", "—"]);
     else if (y.tampon > 0.001) satirlar.push(["Kalan tampon", say(y.tampon, 0) + " birim (yarısı sayıldı)", "—"]);
     const kalan = BUTCE - butceHarca();
@@ -1689,6 +1996,12 @@ function applyOfficialAction(action) {
     }
     case "sol": { solYurut(); return; }
     case "veri": { veriIlet(); return; }
+    case "roverKey": {
+      if (action.key === "KeyA" || action.key === "ArrowLeft") roverTuslari.sol = !!action.down;
+      else if (action.key === "KeyD" || action.key === "ArrowRight") roverTuslari.sag = !!action.down;
+      return;
+    }
+    case "transfer": { transferBaslat(action.anahtar); return; }
     default: return;
   }
 }
@@ -1860,7 +2173,7 @@ function advanceGame(dt) {
   else if (G.faz === "seyir") seyirCiz(dt);
   else if (G.faz === "inis") inisCiz(dt);
   else if (G.faz === "tasarim") tasarimCiz();
-  else if (G.faz === "yuzey") yuzeyCiz();
+  else if (G.faz === "yuzey") { yuzeyGuncelle(dt); yuzeyCiz(); }
 }
 
 function dondur(zaman) {
@@ -1959,6 +2272,17 @@ function bagla() {
   $("#btn-seyir-risk").addEventListener("click", () => { sesAc(); ses("tik"); seyirKarar(false); });
   $("#btn-sol-basyaz").addEventListener("click", () => { sesAc(); solYurut(); });
   $("#btn-yuzey-veri").addEventListener("click", () => { sesAc(); veriIlet(); });
+  $("#btn-gezegen").addEventListener("click", () => { sesAc(); ses("tik"); gezegenPopupAc(true); });
+  $("#btn-gezegen-kapat").addEventListener("click", () => { sesAc(); gezegenPopupAc(false); });
+  $("#gezegen-popup").addEventListener("click", (e) => {
+    if (e.target.id === "gezegen-popup") gezegenPopupAc(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") {
+      const pop = $("#gezegen-popup");
+      if (pop && !pop.hidden) gezegenPopupAc(false);
+    }
+  });
 
   $("#btn-yeni-gorev").addEventListener("click", () => {
     G.yakit = G.modul ? G.modul.yakit : 0;
@@ -1989,6 +2313,7 @@ function kur() {
   tumResimleriYukle();
   tasarimKur();
   inisTusKur();
+  roverTusKur();
   bagla();
   G.misyonlar = misyonlariUret();
   misyonKartlariCiz();

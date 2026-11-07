@@ -204,6 +204,13 @@
               <div id="yuzey-pil" class="guc-cubugu-ic"></div>
             </div>
             <p class="tabular" id="yuzey-pil-yazi">—</p>
+            <div class="rover-hud tabular" id="rover-hud">Rover · pil 60 · veri 0 · 0 m</div>
+            <div class="rover-kontrol">
+              <button class="btn" id="btn-rover-sol" type="button" aria-label="rover geri">◀ geri</button>
+              <button class="btn" id="btn-rover-sag" type="button" aria-label="rover ileri">ileri ▶</button>
+              <span class="rover-ipucu">A/D veya ←/→ ile sür</span>
+            </div>
+            <p class="not rover-durum" id="rover-durum">Rover hazır — yüzeyde veri ve güç hücresi ara.</p>
           </div>
           <div class="kart">
             <h3>Enstrümanlar</h3>
@@ -214,11 +221,21 @@
             <div class="islem-dugmeleri">
               <button class="btn" id="btn-sol-basyaz" type="button">Sölü başlat →</button>
               <button class="btn" id="btn-yuzey-veri" type="button">Veriyi Dünya'ya gönder</button>
+              <button class="btn" id="btn-gezegen" type="button">Gezegenler arası uçuş →</button>
             </div>
             <p class="not">Veri tamponun doluyor; anten olmazsa görev sonu yarısı sayılır.</p>
           </div>
         </div>
         <p class="surec tabular" id="yuzey-gunluk" aria-live="polite">Yüzeye sağ çıktın. Enstrümanları çalıştır, veriyi ilet.</p>
+
+        <div class="gezegen-popup" id="gezegen-popup" role="dialog" aria-modal="true" aria-label="gezegenler arası uçuş" hidden>
+          <div class="gezegen-popup-alim">
+            <h2>Gezegenler arası uçuş</h2>
+            <p>Rover'ı ve modülü başka bir gök cismine taşı. Her uçuş yakıt ve üs gücü harcar; gücü rover ile topladığın hücrelerden sağlarsın. Kalan yakıtın inişe de yetmesi gerekir. Tampondaki iletilmemiş veri uçuşta kaybolur. Varışta yeni yüzeyde veri ve güç hücreleri seni bekler.</p>
+            <div class="gezegen-liste" id="gezegen-liste"></div>
+            <button class="btn" id="btn-gezegen-kapat" type="button">Vazgeç</button>
+          </div>
+        </div>
       </section>
 
       <!-- RAPOR -->
