@@ -284,6 +284,12 @@ app/
 
 Teknik: saf HTML/CSS/JS + Canvas 2D, harici kütüphane veya build adımı yok.
 
+## Katkı
+
+Projeye kod, çizim, belge veya fikirle katkıda bulunabilirsiniz. Ayrıntılar için [`CONTRIBUT.md`](CONTRIBUT.md) dosyasına bakın.
+
+Özet: yeni bir gezegen, brifing, donanım veya atölye tarifi eklemek için ilgili diziyi `game.js`'de düzenleyin; yeni bir varlık için `app/assets/` içine şeffaf PNG koyun. Kod değişiklikleri `node --check` ile test edilmeli ve replay deterministik kalmalıdır.
+
 ## Lisans
 
 MIT — bkz. [LICENCE](LICENCE).
