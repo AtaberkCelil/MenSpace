@@ -123,7 +123,8 @@ Oyun doğrudan bir **ana menüyle** açılır; oradan “Göreve Başla” ile b
 | **Fırlatma** | Pencere göstergesinde ateşleme zamanını yakalarsın | Araç güvenilirliği ve pencere genişliği arasındaki bağ |
 | **Seyir** | Yakıtı arabulucu atış için ayırıp ayırmayacağına karar verirsin | Yakıtın her fazın sigortası olduğu |
 | **İniş** | Hedef gök cisminin çekimine karşı düşüş ve yan hızı sınırların içinde tutarak iniş yaparsın | Yumuşak inişin yakıt–hassasiyet denklemi, her cismin çekimi farklı |
-| **Yüzey** | Söl boyunca enstrümanları çalıştırıp veriyi iletir, rover'ı sürerek veri ve güç hücresi toplarsın | Gündüz/gece döngüsü, depolama, veri tamponu, olaylar, gezegenler arası keşif |
+| **Yüzey** | Söl boyunca enstrümanları çalıştırıp veriyi iletir, rover'ı sürerek veri, güç hücresi ve hammadde toplarsın | Gündüz/gece döngüsü, depolama, veri tamponu, olaylar, gezegenler arası keşif |
+| **Atölye** | Topladığın metal, kristal ve buzdan roket yükseltmeleri üretirsin | Yakıt dönüştürücü, yedek pil, motor ayarı, rover pil yükseltmesi |
 | **Rapor** | Not, puan ve brifing durumu | Hangi karar puanı yükseltti, hangisi bedel getirdi |
 
 ## Görev brifingleri
@@ -214,6 +215,7 @@ tercih edilir. Kasında'nın fazla yakıtı seyir fazında arabulucu atışı be
 - **İniş:** `W`/`↑`/`Boşluk` = tam itki, `S`/`↓` = yarım itki, `A`/`←` ve `D`/`→` = yan itki; ekrana dokunmak tam itki verir
 - **Yüzey:** Enstrüman kutularını işaretle, `Sölü başlat` ile günü ilerlet, `Veriyi Dünya'ya gönder` ile tamponu boşalt
 - **Rover:** `A`/`←` geri, `D`/`→` ileri; ekrandaki `◀ geri` / `ileri ▶` düğmeleri dokunmatik için. Sürüş rover pilini harcar; yüzeydeki mavi veri kristalleri tampona veri, pil ikonları hem rover'a hem üsse güç ekler.
+- **Atölye:** Yüzeyde `Atölye · üretim` düğmesini aç. Rover ile topladığın metal, kristal ve buz kaynaklarını roket yükseltmelerine dönüştür.
 - **Gezegenler arası uçuş:** Yüzeyde `Gezegenler arası uçuş →` düğmesini aç, hedef seç. Her uçuş yakıt ve üs gücü harcar (gücü rover ile toplarsın) ve varışta +8 bilim keşif bonusu verir; yeni yüzeyde rover için taze veri ve güç hücreleri oluşur. Tampondaki iletilmemiş veri uçuşta kaybolur.
 
 ### Rover ve güç kurtarma
@@ -222,6 +224,37 @@ Rover'ın kendi pili 60 birimdir ve sürüşte azalır. Üs pili bittiğinde gö
 rover hâlâ hareket edebiliyorsa yüzeydeki güç hücrelerini toplayıp üsse güç taşıyabilirsin.
 Güç geldiğinde söl ilerletme yeniden açılır. Hem rover hem üs pili tükendiğinde görev enerji
 kaybıyla sonlanır.
+
+### Atölye: kaynak ve üretim
+
+Rover yüzeyde üç çeşit hammadde toplar — **metal**, **kristal** ve **buz**. Her söl yeni bir
+kaynak düğümü belirir, gezegen değiştirdiğinde yeni yüzeyde kaynaklar yenilenir. Kaynaklar
+ve kurulan yükseltmeler gezegenler arası uçuşta korunur.
+
+| Üretim | Malzeme | Etki |
+| --- | --- | --- |
+| **Yedek Pil** (tekrar edebilir) | 2 metal + 1 kristal | Üs gücü +25, rover pili +20; pil bitmiş üssü yeniden açar |
+| **Yakıt Dönüştürücü** (tek sefer) | 3 metal + 2 kristal + 2 buz | Atölyede `1 buz + 1 metal → 4 yakıt` dönüştürmeyi açar |
+| **Motor Ayarı** (tek sefer) | 2 metal + 2 kristal | İniş itkisinde yakıt tüketimi %20 azalır |
+| **Rover Pil Yükseltmesi** (tek sefer) | 2 metal + 2 buz | Rover pil kapasitesi +30 ve tam şarj |
+
+Yakıtın bittiğinde dönüştürücü kurup buz + metal yakıt üretebilirsin; yedek pil ise üs
+enerjisi tükenen görevi yeniden açık tutar.
+
+### Yeni görseller (çizilecek dosyalar)
+
+Oyun, bu dosyalar yoksa renkli yedek şekillerle çalışmaya devam eder. Çizimler
+`app/assets/` klasörüne PNG olarak konmalı:
+
+| Dosya | Boyut | İçerik |
+| --- | --- | --- |
+| `kaynak_metal.png` | 64×64 | Metal hurda yığını / cıvata |
+| `kaynak_kristal.png` | 64×64 | Turkuaz kristal kümesi |
+| `kaynak_buz.png` | 64×64 | Soluk mavi buz bloğu |
+| `uretim_pil.png` | 128×128 | Yedek pil ikonu |
+| `uretim_donusturucu.png` | 128×128 | Yakıt dönüştürücü makinesi |
+| `uretim_metal.png` | 128×128 | Motor ayarı / metal dişlisi ikonu |
+| `uretim_roverpil.png` | 128×128 | Rover pil yükseltmesi ikonu |
 
 ## Puanlama
 

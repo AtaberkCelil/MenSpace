@@ -72,6 +72,8 @@
               <li><b>Fırlatma</b> — pencereyi yakala: ilk tık geri sayım, ikinci tık ateştir.</li>
               <li><b>İniş</b> — W = tam itki, S = yarım itki, A/D = yan itki; yakıt biterse oyun biter.</li>
               <li><b>Yüzey</b> — söl boyunca cihazları çalıştır, veriyi Dünya'ya ilet.</li>
+              <li><b>Rover</b> — A/D ile sür, veri, güç ve metal/kristal/buz topla.</li>
+              <li><b>Atölye</b> — topladığın kaynaklarla yedek pil, yakıt dönüştürücü ve motor ayarı üret.</li>
             </ol>
             <p class="menu-ipucu">Puan: fırlatma hassasiyeti + iniş hassasiyeti + toplanan bilim + bütçe ekonomisi + brifing ödülü.</p>
             <button class="btn ana" id="btn-nasil-kapat" type="button">Anladım →</button>
@@ -205,6 +207,8 @@
             </div>
             <p class="tabular" id="yuzey-pil-yazi">—</p>
             <div class="rover-hud tabular" id="rover-hud">Rover · pil 60 · veri 0 · 0 m</div>
+            <div class="kaynak-hud tabular" id="kaynak-hud">Kaynaklar · metal 0 · kristal 0 · buz 0</div>
+            <div class="uzay-hava tabular" id="uzay-hava">Uzay hava: sakin</div>
             <div class="rover-kontrol">
               <button class="btn" id="btn-rover-sol" type="button" aria-label="rover geri">◀ geri</button>
               <button class="btn" id="btn-rover-sag" type="button" aria-label="rover ileri">ileri ▶</button>
@@ -221,6 +225,7 @@
             <div class="islem-dugmeleri">
               <button class="btn" id="btn-sol-basyaz" type="button">Sölü başlat →</button>
               <button class="btn" id="btn-yuzey-veri" type="button">Veriyi Dünya'ya gönder</button>
+              <button class="btn" id="btn-atolye" type="button">Atölye · üretim</button>
               <button class="btn" id="btn-gezegen" type="button">Gezegenler arası uçuş →</button>
             </div>
             <p class="not">Veri tamponun doluyor; anten olmazsa görev sonu yarısı sayılır.</p>
@@ -234,6 +239,21 @@
             <p>Rover'ı ve modülü başka bir gök cismine taşı. Her uçuş yakıt ve üs gücü harcar; gücü rover ile topladığın hücrelerden sağlarsın. Kalan yakıtın inişe de yetmesi gerekir. Tampondaki iletilmemiş veri uçuşta kaybolur. Varışta yeni yüzeyde veri ve güç hücreleri seni bekler.</p>
             <div class="gezegen-liste" id="gezegen-liste"></div>
             <button class="btn" id="btn-gezegen-kapat" type="button">Vazgeç</button>
+          </div>
+        </div>
+
+        <div class="atolye-popup" id="atolye-popup" role="dialog" aria-modal="true" aria-label="atölye" hidden>
+          <div class="atolye-alim">
+            <h2>Atölye</h2>
+            <p>Rover ile topladığın kaynakları roketini güçlendirmek için kullan. Kaynaklar yeni söllerde ve gezegenlerde yenilenir.</p>
+            <div class="kaynak-envanter" id="atolye-envanter"></div>
+            <div class="uretim-liste" id="atolye-liste"></div>
+            <div class="donusturucu-kutu" id="atolye-donusturucu" hidden>
+              <h3>Yakıt Dönüştürücü</h3>
+              <p>1 buz + 1 metal → 4 yakıt</p>
+              <button class="btn" id="btn-yakit-uret" type="button">Yakıt üret</button>
+            </div>
+            <button class="btn" id="btn-atolye-kapat" type="button">Kapat</button>
           </div>
         </div>
       </section>

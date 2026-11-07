@@ -69,6 +69,28 @@ const DONANIM = [
     kutle: 1, maliyet: 1,   sabit: 2, not: "yüzeye inişte dikilir, +2 bilim" },
 ];
 
+/* ============ atölye / üretim ============ */
+const KAYNAKLAR = {
+  metal:   { ad: "Metal",   img: "assets/kaynak_metal.png",   renk: "#B9BCC7" },
+  kristal: { ad: "Kristal", img: "assets/kaynak_kristal.png", renk: "#4AD0E3" },
+  buz:     { ad: "Buz",     img: "assets/kaynak_buz.png",     renk: "#BFE9FF" },
+};
+
+const URETIMLER = [
+  { anahtar: "yedekPil", ad: "Yedek Pil", img: "assets/uretim_pil.png", tekrar: true,
+    maliyet: { metal: 2, kristal: 1 },
+    aciklama: "Üs gücü +25, rover +20. Güç bitince sölü yeniden açar." },
+  { anahtar: "donusturucu", ad: "Yakıt Dönüştürücü", img: "assets/uretim_donusturucu.png", tekrar: false,
+    maliyet: { metal: 3, kristal: 2, buz: 2 },
+    aciklama: "Buz ve metalden yakıt üretmeyi açar (1 buz + 1 metal → 4 yakıt)." },
+  { anahtar: "motorAyar", ad: "Motor Ayarı", img: "assets/uretim_metal.png", tekrar: false,
+    maliyet: { metal: 2, kristal: 2 },
+    aciklama: "İniş itkisinde yakıt tüketimi %20 azalır." },
+  { anahtar: "roverPil", ad: "Rover Pil Yükseltmesi", img: "assets/uretim_roverpil.png", tekrar: false,
+    maliyet: { metal: 2, buz: 2 },
+    aciklama: "Rover pil kapasitesi +30 ve tam şarj." },
+];
+
 /* ============ hedef gök cisimleri ============ */
 const HEDEFLER = [
   { anahtar: "ay", ad: "Ay", img: "assets/ay.png", cekim: 42, zemin: "#8A8D99", atmosfer: "yok", yuzey: "ay_yuzeyi",
@@ -155,6 +177,9 @@ function freshState() {
       iletilen: 0, geceler: 0, kesintisiz: 0,
       devam: false, gezegenSayisi: 1,
       rover: null, dugumler: [],
+      kaynaklar: { metal: 0, kristal: 0, buz: 0 },
+      uretimler: new Set(),
+      uzayHava: null, uzayHavaCarpan: 1,
     },
   };
 }
@@ -184,6 +209,8 @@ function tumResimleriYukle() {
              "assets/ay_yuzeyi.png", "assets/arkaplan.png");
   HEDEFLER.forEach((h) => { if (h.anahtar !== "ay") liste.push(h.img); });
   liste.push("assets/venus_bulut.png", "assets/mars_rover.png", "assets/gunes.png", "assets/saturn.png", "assets/inis_basarili.png", "assets/inis_basarisiz.png", "assets/rozet_inis.png", "assets/rozet_sol.png", "assets/rozet_bagis.png", "assets/rozet_s.png");
+  liste.push("assets/kaynak_metal.png", "assets/kaynak_kristal.png", "assets/kaynak_buz.png",
+             "assets/uretim_pil.png", "assets/uretim_donusturucu.png", "assets/uretim_metal.png", "assets/uretim_roverpil.png");
   liste.forEach(kaynak => {
     const im = new Image();
     im.src = kaynak;
@@ -247,7 +274,100 @@ function kaynakGuncelle() {
   $("#kn-bilim").textContent = say(G.yuzey.bilim, 0);
 }
 
-/* ============ ortak kanvas çizimleri ============ */
+/* ============ UZAY HAVA (NASA DONKI) ============ */
+const NASA_API_KEY = (typeof window !== "undefined" && window.NASA_API_KEY) || "DEMO_KEY";
+
+function donkiTarih(secim) {
+  const gun = new Date();
+  gun.setDate(gun.getDate() + secim);
+  return gun.toISOString().slice(0, 10);
+}
+
+async function uzayHavaYukle() {
+  if (typeof window === "undefined" || window.MENSPACE_REPLAY) return null;
+  const bugun = donkiTarih(0);
+  const dun = donkiTarih(-1);
+  const url = "https://api.nasa.gov/notifications?startDate=" + dun + "&endDate=" + bugun + "&api_key=" + NASA_API_KEY;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("donki " + res.status);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn("DONKI yuklenemedi:", e && e.message);
+    return null;
+  }
+}
+
+function donkiOlaySec() {
+  const olaylar = ["CME", "FLR", "SEP", "GST", "MPC", "WSA"];
+  return olaylar[Math.floor(rng() * olaylar.length)];
+}
+
+function donkiEtkisiUygula(olay, hedef) {
+  const y = G.yuzey;
+  let mesaj = "";
+  let etki = 1;
+  const mesafe = hedef.anahtar === "merkur" ? 0.3 : hedef.anahtar === "venus" ? 0.5 : hedef.anahtar === "mars" ? 0.7 : 1;
+  switch (olay) {
+    case "CME":
+      etki = 0.6 + mesafe * 0.4;
+      y.uzayHawaCarpan = etki;
+      y.antenArizasi = true;
+      mesaj = "GÜNEŞ KÜTLESİ ATIMI — anten arızası, panel verimi ×" + etki.toFixed(2);
+      break;
+    case "FLR":
+      etki = 1.2 + mesafe * 0.5;
+      y.uzayHawaCarpan = etki;
+      mesaj = "GÜNEŞ PATLAMASI (X-class) — panel hasadı ×" + etki.toFixed(2) + ", rover radyasyon zararı";
+      break;
+    case "SEP":
+      etki = 0.8 + mesafe * 0.4;
+      y.uzayHawaCarpan = etki;
+      mesaj = "RASYON PARTİKÜLLERİ — rover pili azalır, cihazlar karartma modunda";
+      break;
+    case "GST":
+      etki = 0.5 + mesafe * 0.3;
+      y.uzayHawaCarpan = etki;
+      y.antenArizasi = true;
+      mesaj = "MANYETİK FIRTINA — anten arızası, iletim yarım kapasite";
+      break;
+    default:
+      etki = 0.9 + mesafe * 0.2;
+      y.uzayHawaCarpan = etki;
+      mesaj = "UZAY HAVA UYARISI — hava koşulları etkin";
+  }
+  y.uzayHawa = { t: donkiTarih(0), olay: olay, mesaj: mesaj };
+  return mesaj;
+}
+
+async function uzayHawaGuncelle() {
+  const y = G.yuzey;
+  if (G.faz !== "yuzey" || y.bitti) return;
+  const bugun = y.sol;
+  if (y.uzayHawa && y.uzayHawa.sol === bugun) return;
+  if (rng() < 0.6) return; // bazen sessiz gün — hem canli hem replay'de deterministik
+  let mesaj = "";
+  if (typeof window !== "undefined" && window.MENSPACE_REPLAY) {
+    const olay = donkiOlaySec();
+    mesaj = donkiEtkisiUygula(olay, G.hedef);
+  } else {
+    const olaylar = await uzayHavaYukle();
+    if (olaylar) {
+      const secim = olaylar[Math.floor(rng() * olaylar.length)];
+      const olay = (secim && secim.eventType) ? secim.eventType : donkiOlaySec();
+      mesaj = donkiEtkisiUygula(olay, G.hedef);
+    } else {
+      const olay = donkiOlaySec();
+      mesaj = donkiEtkisiUygula(olay, G.hedef);
+    }
+  }
+  if (mesaj) {
+    const gunlukEl = $("#yuzey-gunluk");
+    if (gunlukEl) gunlukEl.textContent += "\n" + mesaj;
+    ses("hata");
+  }
+}
 function yildizOrgu(ctx, w, h) {
   ctx.fillStyle = "#3B4257";
   ctx.fillRect(0, 0, w, h);
@@ -972,16 +1092,17 @@ function inisCiz(dt) {
 
   if (i.durum === "inis") {
     const cer = Math.min(dt, 0.05);
+    const verim = G.yuzey.uretimler && G.yuzey.uretimler.has("motorAyar") ? 0.8 : 1;
     L.vy += G.hedef.cekim * cer;            // hedef gök cisminin çekimi
     let itkiGucu = 0;
     if (inisTuslari.itki && L.yakit > 0) itkiGucu = 1;
     else if (inisTuslari.yarim && L.yakit > 0) itkiGucu = 0.5;
     if (itkiGucu > 0) {
       L.vy -= L.itus * itkiGucu * cer;
-      L.yakit = Math.max(0, L.yakit - 7 * itkiGucu * cer);
+      L.yakit = Math.max(0, L.yakit - 7 * itkiGucu * cer * verim);
     }
-    if (inisTuslari.sol && L.yakit > 0) { L.vx -= L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer); }
-    if (inisTuslari.sag && L.yakit > 0) { L.vx += L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer); }
+    if (inisTuslari.sol && L.yakit > 0) { L.vx -= L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer * verim); }
+    if (inisTuslari.sag && L.yakit > 0) { L.vx += L.itus * 0.32 * cer; L.yakit = Math.max(0, L.yakit - 2.5 * cer * verim); }
     L.x += L.vx * cer;
     L.y += L.vy * cer;
     L.x = sinir(12, L.x, w - 12 - g);
@@ -1044,10 +1165,14 @@ const roverTuslari = { sol: false, sag: false };
 
 function roverHazirla() {
   const y = G.yuzey;
-  y.rover = { x: YUZEY_US_X + 150, pil: 60, pilKap: 60, veri: 0, mesafe: 0, yon: 1, hiz: 0 };
+  const bonus = y.uretimler && y.uretimler.has("roverPil") ? 30 : 0;
+  const kap = 60 + bonus;
+  y.rover = { x: YUZEY_US_X + 150, pil: kap, pilKap: kap, veri: 0, mesafe: 0, yon: 1, hiz: 0 };
   y.dugumler = [];
-  for (let i = 0; i < 6; i++) roverDugumEkle(i % 2 === 0 ? "veri" : "pil");
+  const tipler = ["veri", "veri", "veri", "pil", "pil", "pil", "metal", "metal", "kristal", "kristal", "buz", "buz"];
+  tipler.forEach((t) => roverDugumEkle(t));
   roverHudYaz();
+  kaynakHudYaz();
 }
 
 function roverDugumEkle(tip) {
@@ -1057,12 +1182,15 @@ function roverDugumEkle(tip) {
   if (y.dugumler.some((d) => !d.alindi && Math.abs(d.x - x) < 130)) {
     x = sinir(420, x + 240, YUZEY_DUNYA_GENISLIK - 120);
   }
+  const aralik = {
+    veri: [6, 12], pil: [18, 30], metal: [1, 3], kristal: [1, 2], buz: [1, 2],
+  }[tip] || [1, 2];
   y.dugumler.push({
     id: y.dugumler.length + "-" + Math.round(x),
     tip: tip,
     x: x,
     alindi: false,
-    deger: tip === "veri" ? Math.round(rast(6, 12)) : Math.round(rast(18, 30)),
+    deger: Math.round(rast(aralik[0], aralik[1])),
   });
 }
 
@@ -1085,10 +1213,18 @@ function roverHudYaz() {
     " · veri " + r.veri + " · " + Math.round(r.mesafe) + " m · gezegen " + y.gezegenSayisi;
 }
 
+function kaynakHudYaz() {
+  const el = $("#kaynak-hud");
+  if (!el) return;
+  const k = G.yuzey.kaynaklar || {};
+  el.textContent = "Kaynaklar · metal " + (k.metal || 0) + " · kristal " + (k.kristal || 0) + " · buz " + (k.buz || 0);
+}
+
 function roverDugumTopla() {
   const y = G.yuzey;
   const r = y.rover;
   if (!r) return;
+  if (!y.kaynaklar) y.kaynaklar = { metal: 0, kristal: 0, buz: 0 };
   y.dugumler.forEach((d) => {
     if (d.alindi || Math.abs(d.x - r.x) > 48) return;
     d.alindi = true;
@@ -1096,7 +1232,7 @@ function roverDugumTopla() {
       y.tampon += d.deger;
       r.veri += d.deger;
       roverDurumYaz("Veri örneği toplandı: +" + d.deger + " birim tampon.");
-    } else {
+    } else if (d.tip === "pil") {
       const roverSarz = Math.round(d.deger * 0.6);
       y.pil = sinir(0, y.pil + d.deger, y.pilKap);
       r.pil = sinir(0, r.pil + roverSarz, r.pilKap);
@@ -1107,9 +1243,148 @@ function roverDugumTopla() {
         if (btn) btn.disabled = false;
         roverDurumYaz("GÜÇ GERİ GELDİ — üs yeniden açıldı, söl devam edebilir.");
       }
+    } else {
+      const kaynak = KAYNAKLAR[d.tip];
+      if (!kaynak) return;
+      y.kaynaklar[d.tip] = (y.kaynaklar[d.tip] || 0) + d.deger;
+      roverDurumYaz(kaynak.ad + " toplandı: +" + d.deger + " · atölyede kullan.");
+      kaynakHudYaz();
+      if (atolyeAcikMi()) atolyeCiz();
     }
     ses("onay");
   });
+}
+
+function kaynakYeter(maliyet) {
+  const k = G.yuzey.kaynaklar || {};
+  return Object.keys(maliyet).every((a) => (k[a] || 0) >= maliyet[a]);
+}
+
+function kaynakHarca(maliyet) {
+  const k = G.yuzey.kaynaklar || (G.yuzey.kaynaklar = { metal: 0, kristal: 0, buz: 0 });
+  Object.keys(maliyet).forEach((a) => { k[a] = Math.max(0, (k[a] || 0) - maliyet[a]); });
+}
+
+function gucGeriGeldi() {
+  const y = G.yuzey;
+  if (y.pilBitti && y.pil > 0) {
+    y.pilBitti = false;
+    const btn = $("#btn-sol-basyaz");
+    if (btn) btn.disabled = false;
+  }
+}
+
+function uretimYap(anahtar) {
+  const y = G.yuzey;
+  if (G.faz !== "yuzey" || y.bitti) return;
+  const u = URETIMLER.find((x) => x.anahtar === anahtar);
+  if (!u) return;
+  const kurulu = y.uretimler && y.uretimler.has(anahtar);
+  if (kurulu && !u.tekrar) { roverDurumYaz(u.ad + " zaten kurulu."); ses("tik"); return; }
+  if (!kaynakYeter(u.maliyet)) { roverDurumYaz(u.ad + " için kaynak yetersiz."); ses("hata"); return; }
+  logChallengeAction("uretim", { anahtar: anahtar });
+  kaynakHarca(u.maliyet);
+  if (!y.uretimler) y.uretimler = new Set();
+  y.uretimler.add(anahtar);
+  const r = y.rover;
+  if (anahtar === "yedekPil") {
+    y.pil = sinir(0, y.pil + 25, y.pilKap);
+    if (r) r.pil = sinir(0, r.pil + 20, r.pilKap);
+    gucGeriGeldi();
+    roverDurumYaz("Yedek pil takıldı: üs +25, rover +20.");
+  } else if (anahtar === "roverPil") {
+    if (r) { r.pilKap += 30; r.pil = r.pilKap; }
+    roverDurumYaz("Rover pil kapasitesi +30 — tam şarj.");
+  } else if (anahtar === "motorAyar") {
+    roverDurumYaz("Motor ayarı yapıldı: iniş yakıt tüketimi %20 azaldı.");
+  } else if (anahtar === "donusturucu") {
+    roverDurumYaz("Yakıt dönüştürücü kuruldu: atölyeden yakıt üret.");
+  }
+  ses("onay");
+  kaynakHudYaz();
+  roverHudYaz();
+  yuzeyCiz();
+  atolyeCiz();
+  kaynakGuncelle();
+}
+
+function yakitUret() {
+  const y = G.yuzey;
+  if (G.faz !== "yuzey" || y.bitti) return;
+  if (!y.uretimler || !y.uretimler.has("donusturucu")) {
+    roverDurumYaz("Önce yakıt dönüştürücü kur.");
+    ses("hata");
+    return;
+  }
+  if (!kaynakYeter({ buz: 1, metal: 1 })) {
+    roverDurumYaz("Yakıt üretmek için 1 buz + 1 metal gerekli.");
+    ses("hata");
+    return;
+  }
+  logChallengeAction("yakitUret", {});
+  kaynakHarca({ buz: 1, metal: 1 });
+  G.yakit += 4;
+  roverDurumYaz("Dönüştürücü çalıştı: +4 yakıt.");
+  ses("onay");
+  kaynakHudYaz();
+  yuzeyCiz();
+  atolyeCiz();
+  kaynakGuncelle();
+}
+
+function atolyeAcikMi() {
+  const pop = $("#atolye-popup");
+  return Boolean(pop && !pop.hidden);
+}
+
+function atolyePopupAc(ac) {
+  const pop = $("#atolye-popup");
+  if (!pop) return;
+  if (ac) atolyeCiz();
+  pop.hidden = !ac;
+}
+
+function atolyeCiz() {
+  const envanter = $("#atolye-envanter");
+  const liste = $("#atolye-liste");
+  if (!envanter || !liste) return;
+  const y = G.yuzey;
+  const k = y.kaynaklar || {};
+  envanter.innerHTML = Object.keys(KAYNAKLAR).map((a) => {
+    const x = KAYNAKLAR[a];
+    return '<span class="kaynak-pill"><span class="kaynak-ikon ikon-' + a +
+      '" style="--kaynak-renk:' + x.renk + '"></span>' + x.ad + " <b>" + (k[a] || 0) + "</b></span>";
+  }).join("");
+  const uretimler = y.uretimler || new Set();
+  liste.innerHTML = "";
+  URETIMLER.forEach((u) => {
+    const kurulu = uretimler.has(u.anahtar);
+    const bitti = kurulu && !u.tekrar;
+    const yeter = kaynakYeter(u.maliyet);
+    const kart = document.createElement("div");
+    kart.className = "uretim-kart" + (bitti ? " kurulu" : "");
+    const malzeme = Object.keys(u.maliyet).map((a) => {
+      const ad = KAYNAKLAR[a].ad;
+      const gerek = u.maliyet[a];
+      const mevcut = k[a] || 0;
+      return '<span class="maliyet' + (mevcut < gerek ? " eksik" : "") + '">' + ad + " ×" + gerek + "</span>";
+    }).join("");
+    kart.innerHTML =
+      '<span class="uretim-ikon ikon-' + u.anahtar + '"></span>' +
+      '<div class="uretim-metin"><b>' + u.ad + "</b><span>" + u.aciklama + "</span>" +
+      '<span class="uretim-maliyet">' + malzeme + "</span></div>" +
+      '<button class="btn uretim-btn" type="button"' + (bitti || !yeter ? " disabled" : "") + ">" +
+      (bitti ? "kuruldu" : "üret") + "</button>";
+    const btn = kart.querySelector("button");
+    if (btn) btn.addEventListener("click", () => { sesAc(); uretimYap(u.anahtar); });
+    liste.appendChild(kart);
+  });
+  const don = $("#atolye-donusturucu");
+  if (don) {
+    don.hidden = !uretimler.has("donusturucu");
+    const b = $("#btn-yakit-uret");
+    if (b) b.disabled = !kaynakYeter({ buz: 1, metal: 1 });
+  }
 }
 
 function roverGuncelle(dt) {
@@ -1123,7 +1398,8 @@ function roverGuncelle(dt) {
     r.yon = yon;
     r.hiz = yon * 150;
     r.x = sinir(60, r.x + r.hiz * dt, YUZEY_DUNYA_GENISLIK - 60);
-    r.pil = Math.max(0, r.pil - 2.2 * dt);
+    const uzayTuketim = (y.uzayHawa && y.uzayHawa.olay === "SEP") ? 3.2 : 2.2;
+    r.pil = Math.max(0, r.pil - uzayTuketim * dt);
     r.mesafe += Math.abs(r.hiz * dt);
     roverDugumTopla();
     if (r.pil <= 0) {
@@ -1143,7 +1419,8 @@ function roverTusKur() {
   document.addEventListener("keydown", (e) => {
     if (G.faz !== "yuzey" || !tuslar.includes(e.code)) return;
     const pop = $("#gezegen-popup");
-    if (pop && !pop.hidden) return;
+    const atolye = $("#atolye-popup");
+    if ((pop && !pop.hidden) || (atolye && !atolye.hidden)) return;
     e.preventDefault();
     if (e.repeat) return;
     logChallengeAction("roverKey", { key: e.code, down: true });
@@ -1184,6 +1461,8 @@ function yuzeyeGec() {
   const onceki = {
     sol: y.sol, bilim: y.bilim, iletilen: y.iletilen, geceler: y.geceler,
     gezegenSayisi: y.gezegenSayisi,
+    kaynaklar: y.kaynaklar || { metal: 0, kristal: 0, buz: 0 },
+    uretimler: y.uretimler || new Set(),
   };
   y.tampon = 0;
   y.gunesKesik = false;
@@ -1198,8 +1477,12 @@ function yuzeyeGec() {
     y.iletilen = onceki.iletilen;
     y.geceler = onceki.geceler;
     y.gezegenSayisi = (onceki.gezegenSayisi || 1) + 1;
+    y.kaynaklar = onceki.kaynaklar;
+    y.uretimler = onceki.uretimler;
   } else {
     y.sol = 1; y.bilim = 0; y.iletilen = 0; y.geceler = 0; y.gezegenSayisi = 1;
+    y.kaynaklar = { metal: 0, kristal: 0, buz: 0 };
+    y.uretimler = new Set();
   }
   y.devam = false;
   y.pilKap = 30; // araç bataryası
@@ -1221,12 +1504,13 @@ function yuzeyeGec() {
   yuzeyGecisleriKur();
   yuzeyCiz();
   if (devam) {
-    $("#yuzey-gunluk").textContent = G.hedef.ad + " yüzeyine indin. Keşif bonusu +8 bilim. Rover ile yeni veri ve güç hücreleri topla.";
+    $("#yuzey-gunluk").textContent = G.hedef.ad + " yüzeyine indin. Keşif bonusu +8 bilim. Rover ile yeni veri, güç ve kaynak topla; atölyede üretim yap.";
     roverDurumYaz("Yeni gezegen: " + G.hedef.ad + " — rover hazır.");
   } else {
-    $("#yuzey-gunluk").textContent = "Yüzeye sağ çıktın. Cihazları aç, sölü başlat, veriyi zamanında ilet.";
-    roverDurumYaz("Rover hazır — yüzeyde veri ve güç hücresi ara.");
+    $("#yuzey-gunluk").textContent = "Yüzeye sağ çıktın. Cihazları aç, sölü başlat, veriyi zamanında ilet. Rover ile kaynak toplayıp atölyede roketini güçlendir.";
+    roverDurumYaz("Rover hazır — yüzeyde veri, güç ve kaynak ara.");
   }
+  kaynakHudYaz();
   saatGuncelle("Söl " + y.sol + " / " + misyonSols());
   kaynakGuncelle();
 }
@@ -1337,7 +1621,7 @@ function yuzeyCiz() {
         ctx.drawImage(im, x - g / 2, zeminY - boy - 6, g, boy);
       }
       etiket(ctx, "güç +" + d.deger, x, zeminY + 18);
-    } else {
+    } else if (d.tip === "veri") {
       ctx.fillStyle = "#4ad0e3";
       ctx.beginPath();
       ctx.moveTo(x, zeminY - 44);
@@ -1347,6 +1631,35 @@ function yuzeyCiz() {
       ctx.closePath();
       ctx.fill();
       etiket(ctx, "veri +" + d.deger, x, zeminY + 18);
+    } else {
+      const kaynak = KAYNAKLAR[d.tip];
+      if (!kaynak) return;
+      const im = resim("kaynak_" + d.tip);
+      if (im && im.complete && im.naturalWidth) {
+        const boy = 30, g = boy * (im.naturalWidth / im.naturalHeight);
+        ctx.drawImage(im, x - g / 2, zeminY - boy - 6, g, boy);
+      } else {
+        ctx.fillStyle = kaynak.renk;
+        if (d.tip === "metal") {
+          ctx.fillRect(x - 12, zeminY - 38, 24, 24);
+        } else {
+          ctx.beginPath();
+          if (d.tip === "buz") {
+            ctx.moveTo(x, zeminY - 42);
+            ctx.lineTo(x + 15, zeminY - 12);
+            ctx.lineTo(x - 15, zeminY - 12);
+            ctx.closePath();
+          } else {
+            ctx.moveTo(x, zeminY - 42);
+            ctx.lineTo(x + 13, zeminY - 26);
+            ctx.lineTo(x, zeminY - 10);
+            ctx.lineTo(x - 13, zeminY - 26);
+            ctx.closePath();
+          }
+          ctx.fill();
+        }
+      }
+      etiket(ctx, kaynak.ad.toLowerCase() + " +" + d.deger, x, zeminY + 18);
     }
   });
 
@@ -1397,6 +1710,11 @@ function yuzeyOzetYaz() {
     brifSatir.classList.toggle("tamam", d.basarili);
   }
   roverHudYaz();
+  const uzEl = $("#uzay-hava");
+  if (uzEl) {
+    if (y.uzayHawa) { uzEl.textContent = "Uzay hava: " + y.uzayHawa.mesaj; uzEl.classList.add("aktif"); }
+    else { uzEl.textContent = "Uzay hava: sakin"; uzEl.classList.remove("aktif"); }
+  }
 }
 
 function solYurut() {
@@ -1417,6 +1735,8 @@ function solYurut() {
     });
     const carpan = modDeger("hasatCarpan");
     if (carpan) hasat = Math.round(hasat * carpan);
+    const uzayCarpan = y.uzayHawaCarpan || 1;
+    if (uzayCarpan !== 1) hasat = Math.round(hasat * uzayCarpan);
     const eksik = modDeger("hasatEksik");
     if (eksik) hasat = Math.max(0, hasat - eksik);
   }
@@ -1475,7 +1795,9 @@ function solYurut() {
   if (y.rover) {
     roverDugumEkle("veri");
     roverDugumEkle("pil");
+    roverDugumEkle(["metal", "kristal", "buz"][(y.sol - 1) % 3]);
   }
+  uzayHawaGuncelle();
   yuzeyCiz();
   $("#yuzey-gunluk").textContent = gunluk.join("\n") || "Söl sessiz geçti.";
   kaynakGuncelle();
@@ -1669,6 +1991,10 @@ function raporaGec(baslik, ozet, kaynak) {
     satirlar.push(["İniş", say(G.inis.hassasiyet * 100, 0) + " bölge hassasiyeti", "+" + say(G.inis.hassasiyet * 15, 0)]);
     satirlar.push(["Toplanan bilim", say(y.bilim, 0) + " birim", "+" + say(y.bilim, 0)]);
     if (y.rover) satirlar.push(["Rover keşfi", say(y.rover.veri, 0) + " birim veri · " + say(y.rover.mesafe, 0) + " m sürüş", "—"]);
+    if (y.uretimler && y.uretimler.size > 0) {
+      const adlar = [...y.uretimler].map((a) => (URETIMLER.find((u) => u.anahtar === a) || {}).ad).filter(Boolean).join(", ");
+      satirlar.push(["Atölye üretimi", y.uretimler.size + " yükseltme · " + adlar, "—"]);
+    }
     if ((y.gezegenSayisi || 1) > 1) satirlar.push(["Gezegen ziyaretleri", y.gezegenSayisi + " gök cismi · keşif bonusları bilime dahil", "—"]);
     if (!guc.link) satirlar.push(["Anten yok", "tampon Dünya'ya gidemedi — bilimin yarısı öldü", "—"]);
     else if (y.tampon > 0.001) satirlar.push(["Kalan tampon", say(y.tampon, 0) + " birim (yarısı sayıldı)", "—"]);
@@ -1988,10 +2314,10 @@ function applyOfficialAction(action) {
     }
     case "inisKey": {
       if (typeof inisTuslari === "undefined") return;
-      if (action.key === "KeyW") inisTuslari.itki = !!action.down;
-      else if (action.key === "KeyS") inisTuslari.yarim = !!action.down;
-      else if (action.key === "KeyA") inisTuslari.sol = !!action.down;
-      else if (action.key === "KeyD") inisTuslari.sag = !!action.down;
+      if (action.key === "KeyW" || action.key === "Space" || action.key === "ArrowUp") inisTuslari.itki = !!action.down;
+      else if (action.key === "KeyS" || action.key === "ArrowDown") inisTuslari.yarim = !!action.down;
+      else if (action.key === "KeyA" || action.key === "ArrowLeft") inisTuslari.sol = !!action.down;
+      else if (action.key === "KeyD" || action.key === "ArrowRight") inisTuslari.sag = !!action.down;
       return;
     }
     case "sol": { solYurut(); return; }
@@ -2002,6 +2328,8 @@ function applyOfficialAction(action) {
       return;
     }
     case "transfer": { transferBaslat(action.anahtar); return; }
+    case "uretim": { uretimYap(action.anahtar); return; }
+    case "yakitUret": { yakitUret(); return; }
     default: return;
   }
 }
@@ -2277,10 +2605,18 @@ function bagla() {
   $("#gezegen-popup").addEventListener("click", (e) => {
     if (e.target.id === "gezegen-popup") gezegenPopupAc(false);
   });
+  $("#btn-atolye").addEventListener("click", () => { sesAc(); ses("tik"); atolyePopupAc(true); });
+  $("#btn-atolye-kapat").addEventListener("click", () => { sesAc(); atolyePopupAc(false); });
+  $("#atolye-popup").addEventListener("click", (e) => {
+    if (e.target.id === "atolye-popup") atolyePopupAc(false);
+  });
+  $("#btn-yakit-uret").addEventListener("click", () => { sesAc(); yakitUret(); });
   document.addEventListener("keydown", (e) => {
     if (e.code === "Escape") {
       const pop = $("#gezegen-popup");
       if (pop && !pop.hidden) gezegenPopupAc(false);
+      const atolye = $("#atolye-popup");
+      if (atolye && !atolye.hidden) atolyePopupAc(false);
     }
   });
 
@@ -2291,6 +2627,8 @@ function bagla() {
     G.yuzey.iletilen = 0;
     G.yuzey.geceler = 0;
     G.yuzey.kesintisiz = 0;
+    G.yuzey.kaynaklar = { metal: 0, kristal: 0, buz: 0 };
+    G.yuzey.uretimler = new Set();
     G.firlatma.dogruluk = 0;
     G.inis.hassasiyet = 0;
     G.brif = null;
